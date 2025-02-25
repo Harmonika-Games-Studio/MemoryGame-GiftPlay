@@ -1,0 +1,34 @@
+{
+  "name": "com.harmonika.tools",
+  "displayName": "Harmonika Tools",
+  "version": "0.2.9",
+  "unity": "2018.4",
+  "description": "Provides a suite of tools for the Unity editor, along with runtime assets such as prefabs, images, and sounds.",
+  "type": "library",
+  "author": {
+    "name": "Harmonika Games",
+    "email": "christian.harmonika@harmonikagames.com.br",
+    "url": "https://harmonikagames.com.br/"
+  },
+  "keywords": [
+    "build",
+    "tools",
+    "editor",
+    "UPM",
+    "Harmonika",
+    "AppManager",
+    "assets"
+  ],
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  },
+  "_upm": {
+    "changelogUrl": "https://github.com/Harmonika-Games-Studio/com.harmonika.tools/blob/v0.2.9/CHANGELOG.md"
+  },
+  "repository": {
+    "url": "https://github.com/Harmonika-Games-Studio/com.harmonika.tools.git",
+    "type": "git",
+    "revision": "v0.2.9"
+  },
+  "_fingerprint": "5fc615e3bc44f2471fc7cad3ef04eb4d738fa110"
+}

@@ -4,9 +4,60 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System;
+using UnityEngine.Events;
+using Harmonika.Tools;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 
 public class CustomBuild
 {
+    public string TestJson
+    {
+        get
+        {
+            List<StorageItemConfig> storageItems = new List<StorageItemConfig>
+            {
+                new() { _itemName = "Item1", _initialValue = 10, _prizeScore = 100 },
+                new() { _itemName = "Item2", _initialValue = 5, _prizeScore = 50 }
+            };
+
+            List<LeadDataConfig> leadDataConfig = new List<LeadDataConfig>
+            {
+                new() { fieldName = "nome", id = LeadID.nome, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaUpper, ParseableFields.none, "Sr. Harmonika")},
+                new() { fieldName = "idade", id = LeadID.idade, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "none", "Apenas Números")},
+                new() { fieldName = "telefone", id = LeadID.telefone, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.Numeric, ParseableFields.phone, "(00) 00000-0000")},
+                new() { fieldName = "cpf", id = LeadID.id, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "cpf", "000.000.000-00")},
+                new() { fieldName = "email", id = LeadID.email, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaLowerEmail, ParseableFields.none, "exemplo@harmonika.com")}
+            };
+
+
+            JObject rawData = new JObject
+            {
+                { "cardBack", "https://i.imgur.com/LDsqclp.png" },
+                { "cardsList", new JArray
+                    {
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-281-forest.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-278-island.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-280-mountain.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-277-plains.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-279-swamp.png",
+                        "https://mtginsider.com/wp-content/uploads/2024/08/senseisdiviningtop.png"
+                    }
+                },
+                { "userLogo", "https://logos-world.net/wp-content/uploads/2023/05/Magic-The-Gathering-Logo.png"},
+                { "storageItems", JArray.FromObject(storageItems) },
+                { "leadDataConfig", JArray.FromObject(leadDataConfig) },
+                { "gameName", "<span style=\\\"color: #e03e2d;\\\"><em><strong>Teste<\\/strong><\\/em><\\/span>"},
+                { "primaryColor", "#1BB329"},
+                { "secondaryColor", "#8c9c16"},
+                { "tertiaryColor", "#CD1315"},
+                { "neutralColor", "#000000"}
+            };
+
+            return rawData.ToString();
+        }
+    }
+
     public static void BuildWithCustomAssets()
     {
         string authenticationUser = GetCommandLineArgument("-authenticationUser");

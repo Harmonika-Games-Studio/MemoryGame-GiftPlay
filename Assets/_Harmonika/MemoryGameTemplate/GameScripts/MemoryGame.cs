@@ -262,7 +262,7 @@ public class MemoryGame : MonoBehaviour
         AppManager.Instance.DataSync.AddDataToJObject("tempo", tempo);
         AppManager.Instance.DataSync.AddDataToJObject("pontos", (int)Math.Floor(_config.gameTime - tempo));
 
-        InvokeUtility.Invoke(() =>
+        InvokeUtils.Invoke(() =>
         {
             if (win) WinGame(prizeName);
             else LoseGame();

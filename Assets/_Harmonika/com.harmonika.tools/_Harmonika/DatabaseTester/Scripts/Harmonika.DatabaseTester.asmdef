@@ -1,0 +1,17 @@
+{
+    "name": "Harmonika.DatabaseTester",
+    "rootNamespace": "Harmonika.DatabaseTester",
+    "references": [
+        "GUID:6055be8ebefd69e48b49212b09b47b2f",
+        "GUID:a38c82f7ccdc57f40b87b216ab77ece3"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
