@@ -1,0 +1,67 @@
+name: Build Project for Android (Custom) 📱
+
+on:
+  workflow_dispatch:
+    inputs:
+      AUTHENTICATION_USER:
+        description: 'User Token'
+        required: true
+        type: string
+        default: '{}'
+
+      AUTHENTICATION_PASSWORD:
+        description: 'Password Token'
+        required: true
+        type: string
+        default: '{}'
+
+      ID:
+        description: 'JSON ID'
+        required: true
+        type: string
+        default: '{}'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+env:
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+  UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+  UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+
+jobs:
+  buildAndroid:
+    name: Build for Android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.2.2
+
+      - name: Restore Library cache
+        uses: actions/cache@v4.2.1
+        with:
+          path: Library
+          key: Library-build-Android-${{ github.run_id }}
+          restore-keys: |
+            Library-build-Android-
+            Library-build-
+            Library-
+
+      - name: Build Unity Project with Custom Parameters
+        uses: game-ci/unity-builder@v4.3.0
+        with:
+          targetPlatform: Android
+          buildMethod: CustomBuild.BuildWithCustomAssets
+          customParameters: |
+            -authenticationUser="${{ inputs.AUTHENTICATION_USER }}"
+            -authenticationPassword="${{ inputs.AUTHENTICATION_PASSWORD }}"
+            -id="${{ inputs.ID }}"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Build-Android-${{ github.run_number }}
+          path: Builds/Android/
+          retention-days: 14
