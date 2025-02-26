@@ -16,7 +16,7 @@ public class JsonDeserializedConfig
     public bool useLeads;
     public StorageItemConfig[] storageItems;
 
-    // Construtor padrão necessário para a desserialização
+    // Construtor padrÃ£o necessÃ¡rio para a desserializaÃ§Ã£o
     [JsonConstructor]
     public JsonDeserializedConfig(
         string gameName = "",
@@ -86,7 +86,7 @@ public class MemoryGame : MonoBehaviour
         AppManager.Instance.ApplyScriptableConfig();
         AppManager.Instance.Storage.Setup();
         
-        ApplyJsonConfig();
+        //ApplyJsonConfig();
         SetupButtons();
     }
 
@@ -143,7 +143,7 @@ public class MemoryGame : MonoBehaviour
             _cardsList[i].transform.SetSiblingIndex(i); // Define a nova ordem na grid
         }
 
-        // Se você estiver usando o GridLayoutGroup, force a atualização do layout
+        // Se vocÃª estiver usando o GridLayoutGroup, force a atualizaÃ§Ã£o do layout
         LayoutRebuilder.ForceRebuildLayoutImmediate(_gridLayoutRect);
     }
 
@@ -231,14 +231,14 @@ public class MemoryGame : MonoBehaviour
 
         int totalCards = _config.cardPairs.Length * 2;
 
-        // Priorizar o maior número de colunas possível
-        int numberOfColumns = totalCards; // Começamos assumindo todas as cartas em uma linha
+        // Priorizar o maior nÃºmero de colunas possÃ­vel
+        int numberOfColumns = totalCards; // ComeÃ§amos assumindo todas as cartas em uma linha
         int numberOfRows = 1;
 
-        // Procurar uma combinação onde o número de colunas é maior ou igual ao de linhas
+        // Procurar uma combinaÃ§Ã£o onde o nÃºmero de colunas Ã© maior ou igual ao de linhas
         for (int i = Mathf.CeilToInt(Mathf.Sqrt(totalCards)); i <= totalCards; i++)
         {
-            if (totalCards % i == 0) // Se não sobrar resto, encontramos uma divisão exata
+            if (totalCards % i == 0) // Se nÃ£o sobrar resto, encontramos uma divisÃ£o exata
             {
                 numberOfColumns = i;
                 numberOfRows = totalCards / i;
@@ -254,18 +254,18 @@ public class MemoryGame : MonoBehaviour
         float totalHorizontalPadding = gridLayoutGroup.padding.left + gridLayoutGroup.padding.right;
         float totalVerticalPadding = gridLayoutGroup.padding.top + gridLayoutGroup.padding.bottom;
 
-        // Calcular o tamanho máximo das células, considerando o padding
+        // Calcular o tamanho mÃ¡ximo das cÃ©lulas, considerando o padding
         float maxCellWidth = (gridWidth - totalHorizontalPadding) / numberOfColumns;
         float maxCellHeight = (gridHeight - totalVerticalPadding) / numberOfRows;
 
-        // Calcular o fator de escala para manter a proporção
+        // Calcular o fator de escala para manter a proporÃ§Ã£o
         float widthScale = maxCellWidth / originalCellWidth;
         float heightScale = maxCellHeight / originalCellHeight;
 
-        // Usar o menor fator de escala para garantir que as células se ajustem
+        // Usar o menor fator de escala para garantir que as cÃ©lulas se ajustem
         float scaleFactor = Mathf.Min(widthScale, heightScale);
 
-        // Aplicar o fator de escala ao tamanho original das células
+        // Aplicar o fator de escala ao tamanho original das cÃ©lulas
         float cellWidth = originalCellWidth * scaleFactor;
         float cellHeight = originalCellHeight * scaleFactor;
 
@@ -322,7 +322,7 @@ public class MemoryGame : MonoBehaviour
     {
         SoundSystem.Instance.Play("Fail");
 
-        AppManager.Instance.DataSync.AddDataToJObject("ganhou", "não");
+        AppManager.Instance.DataSync.AddDataToJObject("ganhou", "nÃ£o");
         AppManager.Instance.DataSync.AddDataToJObject("brinde", "nenhum");
 
         _gameMenu.OpenMenu("LoseMenu");
