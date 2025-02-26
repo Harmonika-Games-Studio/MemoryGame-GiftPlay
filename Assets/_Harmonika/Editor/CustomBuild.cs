@@ -107,30 +107,22 @@ public class CustomBuild
             Directory.CreateDirectory(androidBuildPath);
         }
 
-        // Save JSON to file
-        File.WriteAllText(Path.Combine(resourcesPath, "gameConfig.json"), configJson);
-        Debug.Log("Game config saved at: " + Path.Combine(resourcesPath, "gameConfig.json"));
-
-        // Save JSON to Build directory for debugging
-        string buildJsonFilePath = Path.Combine(androidBuildPath, "gameConfig_debug.json");
-        File.WriteAllText(buildJsonFilePath, configJson);
-        Debug.Log("Game config also saved at: " + buildJsonFilePath);
-
-        // Parse JSON and attempt to download the image
+        // Parse JSON and attempt to download the cardBack image
         try
         {
             GameConfig config = JsonUtility.FromJson<GameConfig>(configJson);
             Debug.Log("JSON parsed successfully!");
 
-            if (!string.IsNullOrEmpty(config.customImageUrl))
+            if (!string.IsNullOrEmpty(config.cardBack))
             {
                 using (WebClient client = new WebClient())
                 {
                     client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
 
-                    byte[] imageData = client.DownloadData(config.customImageUrl);
-                    string imagePath = Path.Combine(resourcesPath, "customImage.bytes");
+                    byte[] imageData = client.DownloadData(config.cardBack);
+                    string imagePath = Path.Combine(resourcesPath, "cardBack.bytes");
                     File.WriteAllBytes(imagePath, imageData);
+                    config.cardBack = imagePath;
                     Debug.Log("Custom image downloaded successfully at: " + imagePath);
                 }
 
@@ -141,12 +133,50 @@ public class CustomBuild
             Debug.LogError("Error downloading image: " + e.Message);
         }
 
+        // Parse JSON and attempt to download the cardsList images
+        try
+        {
+            GameConfig config = JsonUtility.FromJson<GameConfig>(configJson);
+            Debug.Log("JSON parsed successfully!");
+
+            for (int i = 0; i < config.cardsList.Count; i++)
+            {
+                if (!string.IsNullOrEmpty(config.cardsList[i]))
+                {
+                    using (WebClient client = new WebClient())
+                    {
+                        client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
+
+                        byte[] imageData = client.DownloadData(config.cardsList[i]);
+                        string imagePath = Path.Combine(resourcesPath, $"cardsList[{i}].bytes");
+                        File.WriteAllBytes(imagePath, imageData);
+                        config.cardBack = imagePath;
+                        Debug.Log("Custom image downloaded successfully at: " + imagePath);
+                    }
+
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("Error downloading image: " + e.Message);
+        }
+
+        // Save JSON to file
+        File.WriteAllText(Path.Combine(resourcesPath, "gameConfig.json"), configJson);
+        Debug.Log("Game config saved at: " + Path.Combine(resourcesPath, "gameConfig.json"));
+
+        // Save JSON to Build directory for debugging
+        string buildJsonFilePath = Path.Combine(androidBuildPath, "gameConfig_debug.json");
+        File.WriteAllText(buildJsonFilePath, configJson);
+        Debug.Log("Game config also saved at: " + buildJsonFilePath);
+
         AssetDatabase.Refresh();
 
         // Execute the build
         BuildPipeline.BuildPlayer(
-            new[] { "Assets/_Harmonika/PublicDemo/PublicDemo.unity" },
-            androidBuildPath + "DemoBuild.apk",
+            new[] { "Assets/_Harmonika/MemoryGameTemplate/MemoryGame.unity" },
+            androidBuildPath + "MemoryGame.apk",
             BuildTarget.Android,
             BuildOptions.None
         );
@@ -181,9 +211,15 @@ public class CustomBuild
     [System.Serializable]
     private class GameConfig
     {
-        public string colorSphere;
-        public string colorPrism;
-        public string colorSquare;
-        public string customImageUrl;
+        public string cardBack;
+        public List<string> cardsList;
+        public string userLogo;
+        public List<StorageItemConfig> storageItems;
+        public List<LeadDataConfig> leadDataConfig;
+        public string gameName;
+        public string primaryColor;
+        public string secondaryColor;
+        public string tertiaryColor;
+        public string neutralColor;
     }
 }
