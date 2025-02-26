@@ -119,6 +119,22 @@ namespace Harmonika.Tools
         public CanvasGroup Group { get => group; }
     }
 
+
+    [System.Serializable]
+    public class MemoryGameConfig
+    {
+        public string cardBack;
+        public List<string> cardsList;
+        public string userLogo;
+        public List<StorageItemConfig> storageItems;
+        public List<LeadDataConfig> leadDataConfig;
+        public string gameName;
+        public string primaryColor;
+        public string secondaryColor;
+        public string tertiaryColor;
+        public string neutralColor;
+    }
+
     [System.Serializable]
     public class StorageItemConfig
     {
@@ -128,6 +144,12 @@ namespace Harmonika.Tools
         public int _prizeScore;
     }
     #endregion
+
+    public static class HarmonikaConstants
+    {
+        public const string RESOURCES_PATH = "Assets/Resources/";
+        public const string ANDROID_BUILD_PATH = "Builds/Android/";
+    }
 
     public static class InvokeUtils
     {

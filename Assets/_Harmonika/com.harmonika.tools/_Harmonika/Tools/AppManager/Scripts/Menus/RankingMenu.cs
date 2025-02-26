@@ -26,7 +26,7 @@ public class RankingMenu : MonoBehaviour {
 
     public void LoadRanking()
     {
-        if (!AppManager.Instance.useLeads) 
+        if (!AppManager.Instance.Config.useLeads) 
         {
             _noRankingText.gameObject.SetActive(true);
             return;

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 045cc4695a78a9b45b1f23df8a89877a, type: 3}
+  m_Name: MemoryGame Custom Config
+  m_EditorClassIdentifier: 
+  musicVolume: 15
+  sfxVolume: 100
+  storageItems:
+  - _itemName: Item1
+    _initialValue: 10
+    _prizeScore: 100
+  - _itemName: Item2
+    _initialValue: 5
+    _prizeScore: 50
+  useLeads: 0
+  memorizationTime: 2
+  gameTime: 20
+  _cardPrefab: {fileID: 4771165339378910402, guid: abd790d0add2e51479c462b93241d30a, type: 3}
+  cardBack: {fileID: 0}
+  cardPairs: []

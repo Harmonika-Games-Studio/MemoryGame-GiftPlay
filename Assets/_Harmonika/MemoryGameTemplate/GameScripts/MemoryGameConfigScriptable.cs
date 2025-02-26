@@ -2,7 +2,7 @@ using UnityEngine;
 using Harmonika.Tools;
 
 [CreateAssetMenu(fileName = "MemoryGame Config", menuName = "Harmonika/ScriptableObjects/MemoryGame Config", order = 1)]
-public class MemoryGameConfig : GameConfigScriptable
+public class MemoryGameConfigScriptable : GameConfigScriptable
 {
     [Space(5)]
     [Header("Configurable Variables")]

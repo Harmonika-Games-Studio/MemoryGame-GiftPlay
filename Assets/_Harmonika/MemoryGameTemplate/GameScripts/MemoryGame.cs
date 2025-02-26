@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -34,7 +35,7 @@ public class JsonDeserializedConfig
 
 public class MemoryGame : MonoBehaviour
 {
-    [SerializeField] private MemoryGameConfig _config;
+    [SerializeField] private MemoryGameConfigScriptable _config;
     
     [Header("References")]
     [SerializeField] private Cronometer _cronometer;
@@ -59,7 +60,7 @@ public class MemoryGame : MonoBehaviour
 
     #region Properties
 
-    public MemoryGameConfig Config { get => _config; }
+    public MemoryGameConfigScriptable Config { get => _config; }
 
     public bool CanClick
     {
@@ -78,14 +79,34 @@ public class MemoryGame : MonoBehaviour
 
         _gridLayoutRect = gridLayoutGroup.gameObject.GetComponent<RectTransform>();
         _cronometer.onEndTimer.AddListener(() => EndGame(false));
-        AppManager.Instance.gameConfig = _config;
+        AppManager.Instance.Config = _config;
 
         _gameMenu = GetComponentInChildren<MenuManager>();
 
         AppManager.Instance.ApplyScriptableConfig();
         AppManager.Instance.Storage.Setup();
         
+        ApplyJsonConfig();
         SetupButtons();
+    }
+
+    private void ApplyJsonConfig()
+    {
+        if (!File.Exists(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json")))
+        {
+            Debug.LogWarning("MemoryGame -> Game config json not found");
+            return;
+        }
+
+        MemoryGameConfig memoryGameConfig = JsonUtility.FromJson<MemoryGameConfig>(Resources.Load<TextAsset>("gameConfig").text);
+        Config.cardBack = Resources.Load<Sprite>(memoryGameConfig.cardBack);
+        Config.cardPairs = new Sprite[memoryGameConfig.cardsList.Count];
+
+        for (int i = 0; i < memoryGameConfig.cardsList.Count; i++)
+        {
+            Debug.Log($"AAAAA: {memoryGameConfig.cardsList[i]}");
+            Config.cardPairs[i] = Resources.Load<Sprite>(memoryGameConfig.cardsList[i]);
+        }
     }
 
     public IEnumerator StartGame()
@@ -164,7 +185,7 @@ public class MemoryGame : MonoBehaviour
 
     private void SetupButtons()
     {
-        if (AppManager.Instance.gameConfig.useLeads)
+        if (AppManager.Instance.Config.useLeads)
         {
             _mainMenu.AddStartGameButtonListener(() => _gameMenu.OpenMenu("CollectLeadsMenu"));
             _mainMenu.AddStartGameButtonListener(() => _collectLeadsMenu.ClearAllFields());

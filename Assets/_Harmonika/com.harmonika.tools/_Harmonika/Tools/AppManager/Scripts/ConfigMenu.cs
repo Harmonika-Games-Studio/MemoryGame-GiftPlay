@@ -58,8 +58,8 @@ public class ConfigMenu : MonoBehaviour
 
     void UpdateInputValues()
     {
-        float musicVolume = PlayerPrefs.GetFloat("Audio: " + Harmonika.Tools.AudioType.Music, AppManager.Instance.gameConfig.musicVolume);
-        float sfxVolume = PlayerPrefs.GetFloat("Audio: " + Harmonika.Tools.AudioType.SFX, AppManager.Instance.gameConfig.sfxVolume);
+        float musicVolume = PlayerPrefs.GetFloat("Audio: " + Harmonika.Tools.AudioType.Music, AppManager.Instance.Config.musicVolume);
+        float sfxVolume = PlayerPrefs.GetFloat("Audio: " + Harmonika.Tools.AudioType.SFX, AppManager.Instance.Config.sfxVolume);
 
         _inputVolumeMusic.text = musicVolume.ToString();
         _inputVolumeSFX.text = sfxVolume.ToString();

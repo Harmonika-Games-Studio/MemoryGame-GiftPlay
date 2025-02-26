@@ -8,10 +8,11 @@ using UnityEngine.Events;
 using Harmonika.Tools;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
+using static UnityEngine.Rendering.STP;
 
-public class CustomBuild
+public static class CustomBuild
 {
-    public string TestJson
+    public static string TestJson
     {
         get
         {
@@ -63,10 +64,23 @@ public class CustomBuild
         string authenticationUser = GetCommandLineArgument("-authenticationUser");
         string authenticationPassword = GetCommandLineArgument("-authenticationPassword");
         string id = GetCommandLineArgument("-id");
+        MemoryGameConfig gameConfig = new();
+
+        // Ensure the Resources directory exists
+        if (!Directory.Exists(HarmonikaConstants.RESOURCES_PATH))
+        {
+            Directory.CreateDirectory(HarmonikaConstants.RESOURCES_PATH);
+        }
+
+        // Ensure the Builds/Android directory exists
+        if (!Directory.Exists(HarmonikaConstants.ANDROID_BUILD_PATH))
+        {
+            Directory.CreateDirectory(HarmonikaConstants.ANDROID_BUILD_PATH);
+        }
 
         string configJson = "";
 
-        Debug.Log("=== STARTING CUSTOM BUILD ===");
+        Debug.Log("CustomBuild.cs -> === STARTING CUSTOM BUILD ===");
 
         // Downloading JSON
         try
@@ -78,110 +92,56 @@ public class CustomBuild
 
                 // Sincronizando requisição JSON
                 configJson = client.GetStringAsync($"https://giftplay.com.br/builds/getGameConfig/{id}").Result;
-                Debug.Log("Received json: " + configJson);
+                Debug.Log("CustomBuild.cs -> Received json: " + configJson);
             }
         }
         catch (System.Exception e)
         {
-            Debug.LogError("Error processing json: " + e.Message);
+            Debug.LogError("CustomBuild.cs -> Error downloading json: " + e.Message);
         }
 
         // Ensure JSON is not empty
         if (string.IsNullOrEmpty(configJson))
         {
-            Debug.LogError("json argument is empty or missing!");
+            Debug.LogError("CustomBuild.cs -> JSON is empty or missing!");
             return;
         }
 
-        // Ensure the Resources directory exists
-        string resourcesPath = "Assets/Resources/";
-        if (!Directory.Exists(resourcesPath))
-        {
-            Directory.CreateDirectory(resourcesPath);
-        }
-
-        // Ensure the Builds/Android directory exists
-        string androidBuildPath = "Builds/Android/";
-        if (!Directory.Exists(androidBuildPath))
-        {
-            Directory.CreateDirectory(androidBuildPath);
-        }
-
-        // Parse JSON and attempt to download the cardBack image
+        // Parse JSON and attempt to download the images
         try
         {
-            GameConfig config = JsonUtility.FromJson<GameConfig>(configJson);
-            Debug.Log("JSON parsed successfully!");
+            gameConfig = JsonUtility.FromJson<MemoryGameConfig>(configJson);
+            Debug.Log("CustomBuild.cs -> JSON parsed successfully!");
 
-            if (!string.IsNullOrEmpty(config.cardBack))
+            List<string> cardsArray = new ();
+
+            for (int i = 0; i < gameConfig.cardsList.Count; i++)
             {
-                using (WebClient client = new WebClient())
-                {
-                    client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
-
-                    byte[] imageData = client.DownloadData(config.cardBack);
-                    string imagePath = Path.Combine(resourcesPath, "cardBack.bytes");
-                    File.WriteAllBytes(imagePath, imageData);
-                    config.cardBack = imagePath;
-                    Debug.Log("Custom image downloaded successfully at: " + imagePath);
-                }
-
+                cardsArray.Add(Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardsList[i], $"card-{i}.png")));
             }
+
+            gameConfig.cardsList = cardsArray;
+            gameConfig.cardBack = Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardBack, "cardBack.png"));
         }
         catch (System.Exception e)
         {
-            Debug.LogError("Error downloading image: " + e.Message);
-        }
-
-        // Parse JSON and attempt to download the cardsList images
-        try
-        {
-            GameConfig config = JsonUtility.FromJson<GameConfig>(configJson);
-            Debug.Log("JSON parsed successfully!");
-
-            for (int i = 0; i < config.cardsList.Count; i++)
-            {
-                if (!string.IsNullOrEmpty(config.cardsList[i]))
-                {
-                    using (WebClient client = new WebClient())
-                    {
-                        client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
-
-                        byte[] imageData = client.DownloadData(config.cardsList[i]);
-                        string imagePath = Path.Combine(resourcesPath, $"cardsList[{i}].bytes");
-                        File.WriteAllBytes(imagePath, imageData);
-                        config.cardBack = imagePath;
-                        Debug.Log("Custom image downloaded successfully at: " + imagePath);
-                    }
-
-                }
-            }
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError("Error downloading image: " + e.Message);
+            Debug.LogError("CustomBuild.cs -> Error downloading image: " + e.Message);
         }
 
         // Save JSON to file
-        File.WriteAllText(Path.Combine(resourcesPath, "gameConfig.json"), configJson);
-        Debug.Log("Game config saved at: " + Path.Combine(resourcesPath, "gameConfig.json"));
-
-        // Save JSON to Build directory for debugging
-        string buildJsonFilePath = Path.Combine(androidBuildPath, "gameConfig_debug.json");
-        File.WriteAllText(buildJsonFilePath, configJson);
-        Debug.Log("Game config also saved at: " + buildJsonFilePath);
-
-        AssetDatabase.Refresh();
+        File.WriteAllText(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "debugGameConfig.json"), configJson);
+        File.WriteAllText(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json"), JsonUtility.ToJson(gameConfig));
+        Debug.Log("CustomBuild.cs -> Game config saved at: " + Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json"));
 
         // Execute the build
         BuildPipeline.BuildPlayer(
             new[] { "Assets/_Harmonika/MemoryGameTemplate/MemoryGame.unity" },
-            androidBuildPath + "MemoryGame.apk",
+            HarmonikaConstants.ANDROID_BUILD_PATH + "MemoryGame.apk",
             BuildTarget.Android,
             BuildOptions.None
         );
 
-        Debug.Log("Build completed successfully!");
+        Debug.Log("CustomBuild.cs -> Build completed successfully!");
     }
 
     private static string GetCommandLineArgument(string name)
@@ -208,18 +168,63 @@ public class CustomBuild
         return System.Convert.ToBase64String(plainTextBytes);
     }
 
-    [System.Serializable]
-    private class GameConfig
+    public static string DownloadImage(string url, string name)
     {
-        public string cardBack;
-        public List<string> cardsList;
-        public string userLogo;
-        public List<StorageItemConfig> storageItems;
-        public List<LeadDataConfig> leadDataConfig;
-        public string gameName;
-        public string primaryColor;
-        public string secondaryColor;
-        public string tertiaryColor;
-        public string neutralColor;
+        if (string.IsNullOrEmpty(url)) return null;
+
+        using (WebClient client = new WebClient())
+        {
+            string imagePath = Path.Combine(HarmonikaConstants.RESOURCES_PATH, name);
+            client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
+
+            byte[] imageData = client.DownloadData(url);
+            Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+
+            if (!texture.LoadImage(imageData)) return null;
+
+            File.WriteAllBytes(imagePath, texture.EncodeToPNG());
+            Debug.Log($"CustomBuild.cs -> Image saved at: {imagePath}");
+            return imagePath;
+        }
+    }
+
+    public static Texture2D LoadTextureFromFile(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            Debug.LogError("CustomBuild.cs -> File not found: " + filePath);
+            return null;
+        }
+
+        byte[] fileData = File.ReadAllBytes(filePath);
+        Texture2D texture = new Texture2D(2, 2);
+        if (texture.LoadImage(fileData))
+        {
+            return texture;
+        }
+
+        Debug.LogError("CustomBuild.cs -> Failed to load texture from file: " + filePath);
+        return null;
+    }
+
+    public static Sprite LoadSpriteFromFile(string filePath)
+    {
+        if (!File.Exists(filePath))
+        {
+            Debug.LogError("CustomBuild.cs -> File not found: " + filePath);
+            return null;
+        }
+
+        byte[] fileData = File.ReadAllBytes(filePath);
+        Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+        if (texture.LoadImage(fileData))
+        {
+            texture.Apply();
+
+            return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+        }
+
+        Debug.LogError("CustomBuild.cs -> Failed to load sprite from file: " + filePath);
+        return null;
     }
 }

@@ -10,8 +10,7 @@ public class AppManager : MonoBehaviour
     private static AppManager _instance;
 
     [Header("AppManager Configuration")]
-    public bool useLeads = false;
-    public GameConfigScriptable gameConfig;
+    private GameConfigScriptable _gameConfig;
     [SerializeField] private MenuPanel[] _menus;
 
     [Space(10)]
@@ -107,8 +106,13 @@ public class AppManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Returns True if application is blocked and save on playerprefs.
+    /// Returns _gameConfig for get and set.
     /// </summary>
+    public GameConfigScriptable Config
+    {
+        get => _gameConfig;
+        set => _gameConfig = value;
+    }
 #endregion
 
     private void Awake()
@@ -170,10 +174,9 @@ public class AppManager : MonoBehaviour
 
     public void ApplyScriptableConfig()
     {
-        if (gameConfig != null)
+        if (_gameConfig != null)
         {
-            useLeads = gameConfig.useLeads;
-            Storage.itemsConfig = gameConfig.storageItems;
+            Storage.itemsConfig = _gameConfig.storageItems;
         }
 
         Storage.Setup();
