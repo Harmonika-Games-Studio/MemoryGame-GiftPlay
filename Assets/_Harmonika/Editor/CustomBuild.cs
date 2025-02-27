@@ -9,56 +9,10 @@ using Harmonika.Tools;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using static UnityEngine.Rendering.STP;
+using System.Linq;
 
 public static class CustomBuild
 {
-    public static string TestJson
-    {
-        get
-        {
-            List<StorageItemConfig> storageItems = new List<StorageItemConfig>
-            {
-                new() { _itemName = "Item1", _initialValue = 10, _prizeScore = 100 },
-                new() { _itemName = "Item2", _initialValue = 5, _prizeScore = 50 }
-            };
-
-            List<LeadDataConfig> leadDataConfig = new List<LeadDataConfig>
-            {
-                new() { fieldName = "nome", id = LeadID.nome, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaUpper, ParseableFields.none, "Sr. Harmonika")},
-                new() { fieldName = "idade", id = LeadID.idade, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "none", "Apenas Números")},
-                new() { fieldName = "telefone", id = LeadID.telefone, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.Numeric, ParseableFields.phone, "(00) 00000-0000")},
-                new() { fieldName = "cpf", id = LeadID.id, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "cpf", "000.000.000-00")},
-                new() { fieldName = "email", id = LeadID.email, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaLowerEmail, ParseableFields.none, "exemplo@harmonika.com")}
-            };
-
-
-            JObject rawData = new JObject
-            {
-                { "cardBack", "https://i.imgur.com/LDsqclp.png" },
-                { "cardsList", new JArray
-                    {
-                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-281-forest.png",
-                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-278-island.png",
-                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-280-mountain.png",
-                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-277-plains.png",
-                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-279-swamp.png",
-                        "https://mtginsider.com/wp-content/uploads/2024/08/senseisdiviningtop.png"
-                    }
-                },
-                { "userLogo", "https://logos-world.net/wp-content/uploads/2023/05/Magic-The-Gathering-Logo.png"},
-                { "storageItems", JArray.FromObject(storageItems) },
-                { "leadDataConfig", JArray.FromObject(leadDataConfig) },
-                { "gameName", "<span style=\\\"color: #e03e2d;\\\"><em><strong>Teste<\\/strong><\\/em><\\/span>"},
-                { "primaryColor", "#1BB329"},
-                { "secondaryColor", "#8c9c16"},
-                { "tertiaryColor", "#CD1315"},
-                { "neutralColor", "#000000"}
-            };
-
-            return rawData.ToString();
-        }
-    }
-
     public static void BuildWithCustomAssets()
     {
         string authenticationUser = GetCommandLineArgument("-authenticationUser");
@@ -124,27 +78,21 @@ public static class CustomBuild
     private static object DownloadMemoryGameAssets(string configJson)
     {
         MemoryGameConfig gameConfig = new();
-        try
+
+        gameConfig = JsonUtility.FromJson<MemoryGameConfig>(configJson);
+        Debug.Log("CustomBuild.cs -> JSON parsed successfully!");
+        
+        List<string> cardsList = new();
+        
+        for (int i = 0; i < gameConfig.cardsList.Count; i++)
         {
-            gameConfig = JsonUtility.FromJson<MemoryGameConfig>(configJson);
-            Debug.Log("CustomBuild.cs -> JSON parsed successfully!");
-
-            List<string> cardsArray = new();
-
-            for (int i = 0; i < gameConfig.cardsList.Count; i++)
-            {
-                cardsArray.Add(Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardsList[i], $"card-{i}.png")));
-            }
-
-            gameConfig.cardsList = cardsArray;
-            gameConfig.cardBack = Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardBack, "cardBack.png"));
-            return gameConfig;
+            cardsList.Add(Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardsList[i], $"card-{i}.png")));
         }
-        catch (System.Exception e)
-        {
-            Debug.LogError("CustomBuild.cs -> Error downloading image: " + e.Message);
-            return null;
-        }
+        
+        gameConfig.cardsList = cardsList;
+        gameConfig.cardBack = Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardBack, "cardBack.png"));
+        gameConfig.userLogo = Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.userLogo, "userLogo.png"));
+        return gameConfig;
     }
 
     private static string GetCommandLineArgument(string name)
@@ -174,20 +122,27 @@ public static class CustomBuild
     public static string DownloadImage(string url, string name)
     {
         if (string.IsNullOrEmpty(url)) return null;
-
-        using (WebClient client = new WebClient())
+        try
         {
-            string imagePath = Path.Combine(HarmonikaConstants.RESOURCES_PATH, name);
-            client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
+            using (WebClient client = new WebClient())
+            {
+                string imagePath = Path.Combine(HarmonikaConstants.RESOURCES_PATH, name);
+                client.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) UnityWebClient/1.0");
 
-            byte[] imageData = client.DownloadData(url);
-            Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+                byte[] imageData = client.DownloadData(url);
+                Texture2D texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
 
-            if (!texture.LoadImage(imageData)) return null;
+                if (!texture.LoadImage(imageData)) return null;
 
-            File.WriteAllBytes(imagePath, texture.EncodeToPNG());
-            Debug.Log($"CustomBuild.cs -> Image saved at: {imagePath}");
-            return imagePath;
+                File.WriteAllBytes(imagePath, texture.EncodeToPNG());
+                Debug.Log($"CustomBuild.cs -> Image saved at: {imagePath}");
+                return imagePath;
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("CustomBuild.cs -> Error downloading image: " + e.Message);
+            return null;
         }
     }
 

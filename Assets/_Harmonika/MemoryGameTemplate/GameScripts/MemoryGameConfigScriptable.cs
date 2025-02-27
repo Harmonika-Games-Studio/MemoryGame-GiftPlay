@@ -6,6 +6,9 @@ public class MemoryGameConfigScriptable : GameConfigScriptable
 {
     [Space(5)]
     [Header("Configurable Variables")]
+    public string gameName = "Jogo da <b>Memória</b>";
+    [Space(5)]
+    [Header("Configurable Variables")]
     public int memorizationTime = 2;
     public int gameTime = 20;
 

@@ -73,6 +73,7 @@ public class MemoryGame : MonoBehaviour
 
     private void Awake()
     {
+        Debug.Log($"AAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n {HarmonikaConstants.TestJson} \n\n\n");
         //This code is necessary to run the game smoothly on android
         Application.targetFrameRate = 60;
         QualitySettings.vSyncCount = 0;
@@ -98,9 +99,15 @@ public class MemoryGame : MonoBehaviour
 
         for (int i = 0; i < memoryGameConfig.cardsList.Count; i++)
         {
-            Debug.Log($"AAAAA: {memoryGameConfig.cardsList[i]}");
             Config.cardPairs[i] = Resources.Load<Sprite>(memoryGameConfig.cardsList[i]);
         }
+
+        Config.useLeads = memoryGameConfig.leadDataConfig.Length > 0;
+        Config.storageItems = memoryGameConfig.storageItems;
+        Config.gameName = memoryGameConfig.gameName;
+        Config.gameTime = memoryGameConfig.gameTime;
+        Config.memorizationTime = memoryGameConfig.memorizationTime;
+        
     }
 
     public IEnumerator StartGame()

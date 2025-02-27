@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using UnityEngine;
 using NaughtyAttributes;
 using UnityEngine.Windows;
+using Newtonsoft.Json.Linq;
 
 namespace Harmonika.Tools
 {
@@ -126,13 +127,15 @@ namespace Harmonika.Tools
         public string cardBack;
         public List<string> cardsList;
         public string userLogo;
-        public List<StorageItemConfig> storageItems;
-        public List<LeadDataConfig> leadDataConfig;
+        public StorageItemConfig[] storageItems;
+        public LeadDataConfig[] leadDataConfig;
         public string gameName;
         public string primaryColor;
         public string secondaryColor;
         public string tertiaryColor;
         public string neutralColor;
+        public int gameTime;
+        public int memorizationTime;
     }
 
     [System.Serializable]
@@ -149,6 +152,55 @@ namespace Harmonika.Tools
     {
         public const string RESOURCES_PATH = "Assets/Resources/";
         public const string ANDROID_BUILD_PATH = "Builds/Android/";
+
+        public static string TestJson
+        {
+            get
+            {
+                List<StorageItemConfig> storageItems = new List<StorageItemConfig>
+            {
+                new() { _itemName = "Item1", _initialValue = 10, _prizeScore = 100 },
+                new() { _itemName = "Item2", _initialValue = 5, _prizeScore = 50 }
+            };
+
+                List<LeadDataConfig> leadDataConfig = new List<LeadDataConfig>
+            {
+                new() { fieldName = "nome", id = LeadID.nome, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaUpper, ParseableFields.none, "Sr. Harmonika")},
+                new() { fieldName = "idade", id = LeadID.idade, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "none", "Apenas Números")},
+                new() { fieldName = "telefone", id = LeadID.telefone, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.Numeric, ParseableFields.phone, "(00) 00000-0000")},
+                new() { fieldName = "cpf", id = LeadID.id, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "cpf", "000.000.000-00")},
+                new() { fieldName = "email", id = LeadID.email, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaLowerEmail, ParseableFields.none, "exemplo@harmonika.com")}
+            };
+
+
+                JObject rawData = new JObject
+            {
+                { "cardBack", "https://i.imgur.com/LDsqclp.png" },
+                { "cardsList", new JArray
+                    {
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-281-forest.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-278-island.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-280-mountain.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-277-plains.png",
+                        "https://draftsim.com/wp-content/uploads/2022/07/dmu-279-swamp.png",
+                        "https://mtginsider.com/wp-content/uploads/2024/08/senseisdiviningtop.png"
+                    }
+                },
+                { "userLogo", "https://logos-world.net/wp-content/uploads/2023/05/Magic-The-Gathering-Logo.png"},
+                { "storageItems", JArray.FromObject(storageItems) },
+                { "leadDataConfig", JArray.FromObject(leadDataConfig) },
+                { "gameName", "<span style=\\\"color: #e03e2d;\\\"><em><strong>Teste<\\/strong><\\/em><\\/span>"},
+                { "gameTime", 30},
+                { "memorizationTime", 3},
+                { "primaryColor", "#1BB329"},
+                { "secondaryColor", "#8c9c16"},
+                { "tertiaryColor", "#CD1315"},
+                { "neutralColor", "#000000"}
+            };
+
+                return rawData.ToString();
+            }
+        }
     }
 
     public static class InvokeUtils
