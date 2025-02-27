@@ -64,7 +64,6 @@ public static class CustomBuild
         string authenticationUser = GetCommandLineArgument("-authenticationUser");
         string authenticationPassword = GetCommandLineArgument("-authenticationPassword");
         string id = GetCommandLineArgument("-id");
-        MemoryGameConfig gameConfig = new();
 
         // Ensure the Resources directory exists
         if (!Directory.Exists(HarmonikaConstants.RESOURCES_PATH))
@@ -90,7 +89,6 @@ public static class CustomBuild
                 string tokenBase64 = Base64Encode($"{authenticationUser}:{authenticationPassword}");
                 client.DefaultRequestHeaders.Add("Authorization", $"Basic {tokenBase64}");
 
-                // Sincronizando requisição JSON
                 configJson = client.GetStringAsync($"https://giftplay.com.br/builds/getGameConfig/{id}").Result;
                 Debug.Log("CustomBuild.cs -> Received json: " + configJson);
             }
@@ -107,30 +105,9 @@ public static class CustomBuild
             return;
         }
 
-        // Parse JSON and attempt to download the images
-        try
-        {
-            gameConfig = JsonUtility.FromJson<MemoryGameConfig>(configJson);
-            Debug.Log("CustomBuild.cs -> JSON parsed successfully!");
-
-            List<string> cardsArray = new ();
-
-            for (int i = 0; i < gameConfig.cardsList.Count; i++)
-            {
-                cardsArray.Add(Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardsList[i], $"card-{i}.png")));
-            }
-
-            gameConfig.cardsList = cardsArray;
-            gameConfig.cardBack = Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardBack, "cardBack.png"));
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogError("CustomBuild.cs -> Error downloading image: " + e.Message);
-        }
-
         // Save JSON to file
         File.WriteAllText(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "debugGameConfig.json"), configJson);
-        File.WriteAllText(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json"), JsonUtility.ToJson(gameConfig));
+        File.WriteAllText(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json"), JsonUtility.ToJson(DownloadMemoryGameAssets(configJson)));
         Debug.Log("CustomBuild.cs -> Game config saved at: " + Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json"));
 
         // Execute the build
@@ -142,6 +119,32 @@ public static class CustomBuild
         );
 
         Debug.Log("CustomBuild.cs -> Build completed successfully!");
+    }
+
+    private static object DownloadMemoryGameAssets(string configJson)
+    {
+        MemoryGameConfig gameConfig = new();
+        try
+        {
+            gameConfig = JsonUtility.FromJson<MemoryGameConfig>(configJson);
+            Debug.Log("CustomBuild.cs -> JSON parsed successfully!");
+
+            List<string> cardsArray = new();
+
+            for (int i = 0; i < gameConfig.cardsList.Count; i++)
+            {
+                cardsArray.Add(Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardsList[i], $"card-{i}.png")));
+            }
+
+            gameConfig.cardsList = cardsArray;
+            gameConfig.cardBack = Path.GetFileNameWithoutExtension(DownloadImage(gameConfig.cardBack, "cardBack.png"));
+            return gameConfig;
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("CustomBuild.cs -> Error downloading image: " + e.Message);
+            return null;
+        }
     }
 
     private static string GetCommandLineArgument(string name)

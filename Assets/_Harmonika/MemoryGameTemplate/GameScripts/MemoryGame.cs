@@ -86,18 +86,12 @@ public class MemoryGame : MonoBehaviour
         AppManager.Instance.ApplyScriptableConfig();
         AppManager.Instance.Storage.Setup();
         
-        //ApplyJsonConfig();
+        ApplyJsonConfig();
         SetupButtons();
     }
 
     private void ApplyJsonConfig()
     {
-        if (!File.Exists(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "gameConfig.json")))
-        {
-            Debug.LogWarning("MemoryGame -> Game config json not found");
-            return;
-        }
-
         MemoryGameConfig memoryGameConfig = JsonUtility.FromJson<MemoryGameConfig>(Resources.Load<TextAsset>("gameConfig").text);
         Config.cardBack = Resources.Load<Sprite>(memoryGameConfig.cardBack);
         Config.cardPairs = new Sprite[memoryGameConfig.cardsList.Count];
