@@ -32,6 +32,19 @@ env:
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
 
 jobs:
+  sendRunID:
+    name: Send Run ID to API
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Run ID via API
+        run: |
+          curl -X POST "https://giftplay.com.br/builds/setRunId" \
+               -H "Content-Type: application/json" \
+               -d '{
+                 "id_build": "${{ inputs.ID }}",
+                 "id_run": "${{ github.run_id }}"
+               }'
+               
   buildAndroid:
     name: Build for Android
     runs-on: ubuntu-latest
