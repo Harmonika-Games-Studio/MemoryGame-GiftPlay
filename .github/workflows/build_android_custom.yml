@@ -36,31 +36,42 @@ jobs:
     name: Send Run ID to API
     runs-on: ubuntu-latest
     steps:
-      - name: Send Run ID via API
+      - name: Send Run ID via API with Basic Auth
         run: |
-          curl -X POST "https://giftplay.com.br/builds/setRunId" \
+          RESPONSE=$(curl -s -o response.txt -w "%{http_code}" \
+               -X POST "https://giftplay.com.br/builds/setRunId" \
                -H "Content-Type: application/json" \
+               -u "${{ inputs.AUTHENTICATION_USER }}:${{ inputs.AUTHENTICATION_PASSWORD }}" \
                -d '{
                  "id_build": "${{ inputs.ID }}",
                  "id_run": "${{ github.run_id }}"
-               }'
+               }')
+
+          if [ "$RESPONSE" -ne 200 ]; then
+            echo "❌ Erro: API retornou código HTTP $RESPONSE"
+            cat response.txt  # Exibe a resposta da API para depuração
+            exit 1  # Falha o job
+          else
+            echo "✅ Sucesso: API retornou código HTTP 200"
+          fi
                
   buildAndroid:
     name: Build for Android
+    needs: sendRunID
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.2.2
 
-#      - name: Restore Library cache
-#        uses: actions/cache@v4.2.1
-#        with:
-#          path: Library
-#          key: Library-build-Android-${{ github.run_id }}
-#          restore-keys: |
-#            Library-build-Android-
-#            Library-build-
-#            Library-
+      - name: Restore Library cache
+        uses: actions/cache@v4.2.1
+        with:
+          path: Library
+          key: Library-build-Android-${{ github.run_id }}
+          restore-keys: |
+            Library-build-Android-
+            Library-build-
+            Library-
 
       - name: Build Unity Project with Custom Parameters
         uses: game-ci/unity-builder@v4.3.0
