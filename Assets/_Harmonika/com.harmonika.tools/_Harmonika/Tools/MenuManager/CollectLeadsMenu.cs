@@ -1,3 +1,4 @@
+using Harmonika.Tools;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -24,6 +25,8 @@ public class CollectLeadsMenu : MonoBehaviour
 
     public Button ContinueGameBtn { get => _continueGameBtn; }
 
+    public Image UserLogo { get => _userLogo; }
+
     public Button BackBtn { get => _backBtn; }
 
     public LeadCaptation Leads { get => _leadCaptation; }
@@ -33,10 +36,7 @@ public class CollectLeadsMenu : MonoBehaviour
         _collectLeadsTitle.color = neutralColor;
         _backgroundImage.color = primaryColor;
         _backgroundFill.color = secondaryColor;
-
-        ColorBlock cb = _continueGameBtn.colors;
-        cb.normalColor = tertiaryColor;
-        _continueGameBtn.colors = cb;
+        _continueGameBtn.colors = UIHelper.CreateProportionalColorBlock(tertiaryColor); ;
         _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 

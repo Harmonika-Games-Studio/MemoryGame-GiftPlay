@@ -1,3 +1,4 @@
+using Harmonika.Tools;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -22,15 +23,14 @@ public class ParticipationMenu : MonoBehaviour
 
     public Button BackBtn { get => _backBtn; }
 
+    public Image UserLogo { get => _userLogo; }
+
     public void ChangeVisualIdentity(Color primaryColor, Color secondaryColor, Color tertiaryColor, Color neutralColor)
     {
         _participationText.color = neutralColor;
         _backgroundImage.color = secondaryColor;
         _backgroundFill.color = primaryColor;
-
-        ColorBlock cb = _backBtn.colors;
-        cb.normalColor = tertiaryColor;
-        _backBtn.colors = cb;
+        _backBtn.colors = UIHelper.CreateProportionalColorBlock(tertiaryColor);
         _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 }

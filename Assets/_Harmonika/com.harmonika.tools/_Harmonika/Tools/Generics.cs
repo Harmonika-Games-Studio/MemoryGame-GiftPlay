@@ -6,6 +6,7 @@ using UnityEngine;
 using NaughtyAttributes;
 using UnityEngine.Windows;
 using Newtonsoft.Json.Linq;
+using UnityEngine.UI;
 
 namespace Harmonika.Tools
 {
@@ -452,4 +453,34 @@ namespace Harmonika.Tools
             }
         }
     }
+
+    public static class UIHelper
+    {
+        /// <summary>
+        /// Creates a ColorBlock with colors proportional to the base color (normalColor).
+        /// </summary>
+        /// <param name="normalColor">Base color for the normal state.</param>
+        /// <returns>ColorBlock with the other colors adjusted proportionally.</returns>
+        public static ColorBlock CreateProportionalColorBlock(Color normalColor)
+        {
+            ColorBlock block = new ColorBlock();
+            block.normalColor = normalColor;
+            block.highlightedColor = MultiplyColor(normalColor, 0.88235f);
+            block.pressedColor = MultiplyColor(normalColor, 0.6980392f);
+            block.selectedColor = MultiplyColor(normalColor, 0.88235f);
+            block.disabledColor = MultiplyColor(normalColor, 0.5215687f);
+            block.colorMultiplier = 1f;
+            block.fadeDuration = 0.1f;
+            return block;
+        }
+
+        /// <summary>
+        /// Multiplies the RGB channels of a color by a factor while keeping the alpha channel unchanged.
+        /// </summary>
+        private static Color MultiplyColor(Color color, float factor)
+        {
+            return new Color(color.r * factor, color.g * factor, color.b * factor, color.a);
+        }
+    }
+
 }

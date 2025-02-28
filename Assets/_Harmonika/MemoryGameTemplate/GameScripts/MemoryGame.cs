@@ -5,6 +5,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -121,9 +122,20 @@ public class MemoryGame : MonoBehaviour
         _victoryMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
         _participationMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
         _loseMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
+
         _backgroundImage.color = config.secondaryColor.HexToColor();
         _backgroundFill.color = config.primaryColor.HexToColor();
-        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
+
+        _startMenu.TitleText = config.gameName;
+
+        _userLogo.SetNativeSize();
+
+        
+        _startMenu.UserLogo.SetNativeSize();
+        _collectLeadsMenu.UserLogo.SetNativeSize();
+        _victoryMenu.UserLogo.SetNativeSize();
+        _participationMenu.UserLogo.SetNativeSize();
+        _loseMenu.UserLogo.SetNativeSize();
     }
 
     public IEnumerator StartGame()
@@ -132,6 +144,7 @@ public class MemoryGame : MonoBehaviour
          _cronometer.totalTimeInSeconds = PlayerPrefs.GetInt("GameTime");
         _cronometer.StartTimer();
 
+        _startMenu.UpdateStartMenuCards(Config.cardBack, Config.cardPairs[UnityEngine.Random.Range(0, Config.cardPairs.Length - 1)]);
         InstantiateCards();
         AdjustGridLayout();
         ShuffleCards();
