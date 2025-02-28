@@ -5,8 +5,11 @@ using UnityEngine.UI;
 
 public class ParticipationMenu : MonoBehaviour
 {
-    [SerializeField] private Button _backToMainMenu;
+    [SerializeField] private Button _backBtn;
     [SerializeField] private TMP_Text _participationText;
+    [SerializeField] private Image _backgroundImage;
+    [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Image _userLogo;
 
     public string VictoryText
     {
@@ -17,13 +20,17 @@ public class ParticipationMenu : MonoBehaviour
         }
     }
 
-    public void AddBackToMainMenuButtonListener(UnityAction action)
-    {
-        _backToMainMenu.onClick.AddListener(action);
-    }
+    public Button BackBtn { get => _backBtn; }
 
-    public void ChangeVisualIdentity(Color a)
+    public void ChangeVisualIdentity(Color primaryColor, Color secondaryColor, Color tertiaryColor, Color neutralColor)
     {
-        _participationText.color = a;
+        _participationText.color = neutralColor;
+        _backgroundImage.color = secondaryColor;
+        _backgroundFill.color = primaryColor;
+
+        ColorBlock cb = _backBtn.colors;
+        cb.normalColor = tertiaryColor;
+        _backBtn.colors = cb;
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 }

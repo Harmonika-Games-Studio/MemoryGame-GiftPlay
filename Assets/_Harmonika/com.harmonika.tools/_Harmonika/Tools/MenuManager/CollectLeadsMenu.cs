@@ -5,10 +5,13 @@ using UnityEngine.UI;
 
 public class CollectLeadsMenu : MonoBehaviour
 {
-    [SerializeField] private Button _continueGame;
-    [SerializeField] private Button _back;
+    [SerializeField] private Image _backgroundImage;
+    [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Button _continueGameBtn;
+    [SerializeField] private Button _backBtn;
     [SerializeField] private TMP_Text _collectLeadsTitle;
     [SerializeField] private LeadCaptation _leadCaptation;
+    [SerializeField] private Image _userLogo;
 
     public string LeadsText
     {
@@ -19,21 +22,22 @@ public class CollectLeadsMenu : MonoBehaviour
         }
     }
 
+    public Button ContinueGameBtn { get => _continueGameBtn; }
+
+    public Button BackBtn { get => _backBtn; }
+
     public LeadCaptation Leads { get => _leadCaptation; }
 
-    public void AddContinueGameButtonListener(UnityAction action)
+    public void ChangeVisualIdentity(Color primaryColor, Color secondaryColor, Color tertiaryColor, Color neutralColor)
     {
-        _continueGame.onClick.AddListener(action);
-    }
-    
-    public void AddBackButtonListener(UnityAction action)
-    {
-        _back.onClick.AddListener(action);
-    }
+        _collectLeadsTitle.color = neutralColor;
+        _backgroundImage.color = primaryColor;
+        _backgroundFill.color = secondaryColor;
 
-    public void ChangeVisualIdentity(Color primary)
-    {
-        _collectLeadsTitle.color = primary;
+        ColorBlock cb = _continueGameBtn.colors;
+        cb.normalColor = tertiaryColor;
+        _continueGameBtn.colors = cb;
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 
     public void ClearAllFields()

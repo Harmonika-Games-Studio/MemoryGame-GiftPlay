@@ -6,8 +6,11 @@ using UnityEngine.UI;
 
 public class StartMenu : MonoBehaviour
 {
-    [SerializeField] private Button _startGame;
+    [SerializeField] private Image _backgroundImage;
+    [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Button _startGameBtn;
     [SerializeField] private TMP_Text _titleText;
+    [SerializeField] private Image _userLogo;
 
     public string TitleText
     {
@@ -18,13 +21,19 @@ public class StartMenu : MonoBehaviour
         }
     }
 
-    public void AddStartGameButtonListener(UnityAction action)
+    public Button StartGameBtn
     {
-        _startGame.onClick.AddListener(action);
+        get => _startGameBtn;
     }
 
-    public void ChangeVisualIdentity(Color titleColor)
+    public void ChangeVisualIdentity(Color primaryColor, Color secondaryColor, Color tertiaryColor, Color neutralColor)
     {
-        _titleText.color = titleColor;
+        _titleText.color = neutralColor;
+        _backgroundImage.color = primaryColor;
+        _backgroundFill.color = secondaryColor;
+        ColorBlock cb = _startGameBtn.colors;
+        cb.normalColor = tertiaryColor;
+        _startGameBtn.colors = cb;
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 }

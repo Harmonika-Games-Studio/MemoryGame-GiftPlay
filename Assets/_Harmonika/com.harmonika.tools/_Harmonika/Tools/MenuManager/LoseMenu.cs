@@ -5,8 +5,11 @@ using UnityEngine.UI;
 
 public class LoseMenu : MonoBehaviour
 {
-    [SerializeField] private Button _backToMainMenu;
+    [SerializeField] private Button _backBtn;
     [SerializeField] private TMP_Text _loseText;
+    [SerializeField] private Image _backgroundImage;
+    [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Image _userLogo;
 
     public string LoseText
     {
@@ -17,13 +20,17 @@ public class LoseMenu : MonoBehaviour
         }
     }
 
-    public void AddBackToMainMenuButtonListener(UnityAction action)
-    {
-        _backToMainMenu.onClick.AddListener(action);
-    }
+    public Button BackBtn { get => _backBtn; }
 
-    public void ChangeVisualIdentity(Color a)
+    public void ChangeVisualIdentity(Color primaryColor, Color secondaryColor, Color tertiaryColor, Color neutralColor)
     {
-        _loseText.color = a;
+        _loseText.color = neutralColor;
+        _backgroundImage.color = secondaryColor;
+        _backgroundFill.color = primaryColor;
+
+        ColorBlock cb = _backBtn.colors;
+        cb.normalColor = tertiaryColor;
+        _backBtn.colors = cb;
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 }

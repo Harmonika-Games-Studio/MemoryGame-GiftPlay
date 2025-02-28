@@ -36,18 +36,23 @@ public class JsonDeserializedConfig
 public class MemoryGame : MonoBehaviour
 {
     [SerializeField] private MemoryGameConfigScriptable _config;
-    
+
+    [Header("UI")]
+    [SerializeField] private Image _backgroundImage;
+    [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Image _userLogo;
+
     [Header("References")]
     [SerializeField] private Cronometer _cronometer;
     [SerializeField] private GridLayoutGroup gridLayoutGroup;
 
     [Header("Menus")]
-    [SerializeField] private StartMenu _mainMenu;
+    [SerializeField] private StartMenu _startMenu;
     [SerializeField] private CollectLeadsMenu _collectLeadsMenu;
     [SerializeField] private VictoryMenu _victoryMenu;
     [SerializeField] private ParticipationMenu _participationMenu;
     [SerializeField] private LoseMenu _loseMenu;
-    
+
     private int _revealedPairs;
     private int _remainingTime;
     private bool _canClick = true;
@@ -73,7 +78,6 @@ public class MemoryGame : MonoBehaviour
 
     private void Awake()
     {
-        Debug.Log($"AAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n\n\n {HarmonikaConstants.TestJson} \n\n\n");
         //This code is necessary to run the game smoothly on android
         Application.targetFrameRate = 60;
         QualitySettings.vSyncCount = 0;
@@ -86,7 +90,7 @@ public class MemoryGame : MonoBehaviour
 
         AppManager.Instance.ApplyScriptableConfig();
         AppManager.Instance.Storage.Setup();
-        
+
         ApplyJsonConfig();
         SetupButtons();
     }
@@ -107,7 +111,19 @@ public class MemoryGame : MonoBehaviour
         Config.gameName = memoryGameConfig.gameName;
         Config.gameTime = memoryGameConfig.gameTime;
         Config.memorizationTime = memoryGameConfig.memorizationTime;
-        
+        ApplyTheme(memoryGameConfig);
+    }
+
+    private void ApplyTheme(MemoryGameConfig config)
+    {
+        _startMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
+        _collectLeadsMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
+        _victoryMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
+        _participationMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
+        _loseMenu.ChangeVisualIdentity(config.primaryColor.HexToColor(), config.secondaryColor.HexToColor(), config.tertiaryColor.HexToColor(), config.neutralColor.HexToColor());
+        _backgroundImage.color = config.secondaryColor.HexToColor();
+        _backgroundFill.color = config.primaryColor.HexToColor();
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 
     public IEnumerator StartGame()
@@ -188,21 +204,21 @@ public class MemoryGame : MonoBehaviour
     {
         if (AppManager.Instance.Config.useLeads)
         {
-            _mainMenu.AddStartGameButtonListener(() => _gameMenu.OpenMenu("CollectLeadsMenu"));
-            _mainMenu.AddStartGameButtonListener(() => _collectLeadsMenu.ClearAllFields());
-            _collectLeadsMenu.AddContinueGameButtonListener(() => _gameMenu.CloseMenus()); 
-            _collectLeadsMenu.AddContinueGameButtonListener(() => StartCoroutine(StartGame()));
-            _collectLeadsMenu.AddBackButtonListener(() => _gameMenu.OpenMenu("MainMenu"));
+            _startMenu.StartGameBtn.onClick.AddListener(() => _gameMenu.OpenMenu("CollectLeadsMenu"));
+            _startMenu.StartGameBtn.onClick.AddListener(() => _collectLeadsMenu.ClearAllFields());
+            _collectLeadsMenu.ContinueGameBtn.onClick.AddListener(() => _gameMenu.CloseMenus()); 
+            _collectLeadsMenu.ContinueGameBtn.onClick.AddListener(() => StartCoroutine(StartGame()));
+            _collectLeadsMenu.BackBtn.onClick.AddListener(() => _gameMenu.OpenMenu("MainMenu"));
         }
         else
         {
-            _mainMenu.AddStartGameButtonListener(() => _gameMenu.CloseMenus());
-            _mainMenu.AddStartGameButtonListener(() => StartCoroutine(StartGame()));
+            _startMenu.StartGameBtn.onClick.AddListener(() => _gameMenu.CloseMenus());
+            _startMenu.StartGameBtn.onClick.AddListener(() => StartCoroutine(StartGame()));
         }
 
-        _victoryMenu.AddBackToMainMenuButtonListener(() => _gameMenu.OpenMenu("MainMenu"));
-        _loseMenu.AddBackToMainMenuButtonListener(() => _gameMenu.OpenMenu("MainMenu"));
-        _participationMenu.AddBackToMainMenuButtonListener(() => _gameMenu.OpenMenu("MainMenu"));
+        _victoryMenu.BackBtn.onClick.AddListener(() => _gameMenu.OpenMenu("MainMenu"));
+        _loseMenu.BackBtn.onClick.AddListener(() => _gameMenu.OpenMenu("MainMenu"));
+        _participationMenu.BackBtn.onClick.AddListener(() => _gameMenu.OpenMenu("MainMenu"));
     }
 
     private void InstantiateCards()

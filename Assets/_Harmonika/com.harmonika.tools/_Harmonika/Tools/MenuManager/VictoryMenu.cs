@@ -5,9 +5,12 @@ using UnityEngine.UI;
 
 public class VictoryMenu : MonoBehaviour
 {
-    [SerializeField] private Button _backToMainMenu;
+    [SerializeField] private Button _backBtn;
     [SerializeField] private TMP_Text _victoryText;
     [SerializeField] private TMP_Text _examplePrizeText;
+    [SerializeField] private Image _backgroundImage;
+    [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Image _userLogo;
 
     public string VictoryText
     {
@@ -18,14 +21,19 @@ public class VictoryMenu : MonoBehaviour
         }
     }
 
-    public void AddBackToMainMenuButtonListener(UnityAction action)
-    {
-        _backToMainMenu.onClick.AddListener(action);
-    }
+    public Button BackBtn { get => _backBtn; }
 
-    public void ChangeVisualIdentity(Color a)
+    public void ChangeVisualIdentity(Color primaryColor, Color secondaryColor, Color tertiaryColor, Color neutralColor)
     {
-        _victoryText.color = a;
+        _victoryText.color = neutralColor;
+        _examplePrizeText.color = neutralColor;
+        _backgroundImage.color = secondaryColor;
+        _backgroundFill.color = primaryColor;
+
+        ColorBlock cb = _backBtn.colors;
+        cb.normalColor = tertiaryColor;
+        _backBtn.colors = cb;
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
     }
 
     public void ChangePrizeText(string prizeName)
