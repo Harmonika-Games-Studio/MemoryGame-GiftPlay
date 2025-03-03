@@ -37,10 +37,12 @@ public class JsonDeserializedConfig
 public class MemoryGame : MonoBehaviour
 {
     [SerializeField] private MemoryGameConfigScriptable _config;
+    [SerializeField] private AutoLeadForm _autoLeads;
 
     [Header("UI")]
     [SerializeField] private Image _backgroundImage;
     [SerializeField] private Image _backgroundFill;
+    [SerializeField] private Image _cronometerColor;
     [SerializeField] private Image _userLogo;
 
     [Header("References")]
@@ -94,6 +96,7 @@ public class MemoryGame : MonoBehaviour
 
         ApplyJsonConfig();
         SetupButtons();
+        _startMenu.UpdateStartMenuCards(Config.cardBack, Config.cardPairs[UnityEngine.Random.Range(0, Config.cardPairs.Length - 1)]);
     }
 
     private void ApplyJsonConfig()
@@ -101,6 +104,8 @@ public class MemoryGame : MonoBehaviour
         MemoryGameConfig memoryGameConfig = JsonUtility.FromJson<MemoryGameConfig>(Resources.Load<TextAsset>("gameConfig").text);
         Config.cardBack = Resources.Load<Sprite>(memoryGameConfig.cardBack);
         Config.cardPairs = new Sprite[memoryGameConfig.cardsList.Count];
+
+        _autoLeads.leadDataConfig = memoryGameConfig.leadDataConfig;
 
         for (int i = 0; i < memoryGameConfig.cardsList.Count; i++)
         {
@@ -125,26 +130,20 @@ public class MemoryGame : MonoBehaviour
 
         _backgroundImage.color = config.secondaryColor.HexToColor();
         _backgroundFill.color = config.primaryColor.HexToColor();
+        _cronometerColor.color = config.tertiaryColor.HexToColor();
 
-        _startMenu.TitleText = config.gameName;
+        _startMenu.TitleText = UIHelper.ConvertHtmlToTMPRichText(config.gameName);
 
+        _userLogo.sprite = Resources.Load<Sprite>("userLogo");
         _userLogo.SetNativeSize();
-
-        
-        _startMenu.UserLogo.SetNativeSize();
-        _collectLeadsMenu.UserLogo.SetNativeSize();
-        _victoryMenu.UserLogo.SetNativeSize();
-        _participationMenu.UserLogo.SetNativeSize();
-        _loseMenu.UserLogo.SetNativeSize();
     }
 
     public IEnumerator StartGame()
     {
         _startTime = Time.time;
-         _cronometer.totalTimeInSeconds = PlayerPrefs.GetInt("GameTime");
+        _cronometer.totalTimeInSeconds = PlayerPrefs.GetInt("GameTime");
         _cronometer.StartTimer();
 
-        _startMenu.UpdateStartMenuCards(Config.cardBack, Config.cardPairs[UnityEngine.Random.Range(0, Config.cardPairs.Length - 1)]);
         InstantiateCards();
         AdjustGridLayout();
         ShuffleCards();
@@ -309,6 +308,7 @@ public class MemoryGame : MonoBehaviour
     private void EndGame(bool win, string prizeName = null)
     {
         _cronometer.EndTimer();
+        _startMenu.UpdateStartMenuCards(Config.cardBack, Config.cardPairs[UnityEngine.Random.Range(0, Config.cardPairs.Length - 1)]);
         float tempo = Time.time - _startTime;
         AppManager.Instance.DataSync.AddDataToJObject("tempo", tempo);
         AppManager.Instance.DataSync.AddDataToJObject("pontos", (int)Math.Floor(_config.gameTime - tempo));

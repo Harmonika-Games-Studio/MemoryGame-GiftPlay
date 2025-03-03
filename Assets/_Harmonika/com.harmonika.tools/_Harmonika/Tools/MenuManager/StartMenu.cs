@@ -35,6 +35,7 @@ public class StartMenu : MonoBehaviour
         _backgroundFill.color = secondaryColor;
         _startGameBtn.colors = UIHelper.CreateProportionalColorBlock(tertiaryColor);
         _userLogo.sprite = Resources.Load<Sprite>("userLogo");
+        _userLogo.SetNativeSize();
     }
 
     public void UpdateStartMenuCards(string cardFrontName, string cardBackName)

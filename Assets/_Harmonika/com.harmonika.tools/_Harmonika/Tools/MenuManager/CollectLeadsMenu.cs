@@ -38,6 +38,7 @@ public class CollectLeadsMenu : MonoBehaviour
         _backgroundFill.color = secondaryColor;
         _continueGameBtn.colors = UIHelper.CreateProportionalColorBlock(tertiaryColor); ;
         _userLogo.sprite = Resources.Load<Sprite>("userLogo");
+        _userLogo.SetNativeSize();
     }
 
     public void ClearAllFields()

@@ -15,15 +15,31 @@ MonoBehaviour:
   musicVolume: 15
   sfxVolume: 100
   storageItems:
-  - _itemName: Item1
-    _initialValue: 10
-    _prizeScore: 100
-  - _itemName: Item2
-    _initialValue: 5
-    _prizeScore: 50
-  useLeads: 0
+  - _itemName: Sol Ring
+    _initialValue: 2
+    _prizeScore: 0
+  - _itemName: Arcane Signet
+    _initialValue: 1
+    _prizeScore: 0
+  useLeads: 1
+  gameName: '<span style="color: #000000;"><em>M<span style="color: #000000;">agic
+    Memory</span></em></span> <strong>II</strong>'
   memorizationTime: 2
-  gameTime: 20
+  gameTime: 30
   _cardPrefab: {fileID: 4771165339378910402, guid: abd790d0add2e51479c462b93241d30a, type: 3}
-  cardBack: {fileID: 0}
-  cardPairs: []
+  cardBack: {fileID: -5777897504942914823, guid: 7fece1ef9cd60624ca726fdc51c9025c, type: 3}
+  cardPairs:
+  - {fileID: 5221724658712456527, guid: 6d6dea2d4bae97641a2bcd8854be277a, type: 3}
+  - {fileID: -4178850767267449310, guid: 65ceeb195a1078a45b18543fdc776a26, type: 3}
+  - {fileID: -578346011955896977, guid: 660771a5a53866148ac4157b6a05239d, type: 3}
+  - {fileID: -8414947100295029623, guid: 7d09079f29cedf44aa63babd12688350, type: 3}
+  - {fileID: 4913281113858242883, guid: 374c22386baff094a8379729548b7a3b, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}
+  - {fileID: 1583697572503821759, guid: 0e1a0219cc8894d468a3ec17e120976c, type: 3}

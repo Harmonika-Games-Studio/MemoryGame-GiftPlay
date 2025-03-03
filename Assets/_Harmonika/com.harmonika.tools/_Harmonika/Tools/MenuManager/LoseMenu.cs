@@ -32,5 +32,6 @@ public class LoseMenu : MonoBehaviour
         _backgroundFill.color = primaryColor;
         _backBtn.colors = UIHelper.CreateProportionalColorBlock(tertiaryColor);
         _userLogo.sprite = Resources.Load<Sprite>("userLogo");
+        _userLogo.SetNativeSize();
     }
 }

@@ -481,6 +481,32 @@ namespace Harmonika.Tools
         {
             return new Color(color.r * factor, color.g * factor, color.b * factor, color.a);
         }
+
+        /// <summary>
+        /// Converts a basic HTML formatted string (with span, em, and strong tags) 
+        /// into TextMesh Pro compatible rich text.
+        /// </summary>
+        /// <param name="input">The HTML string to convert.</param>
+        /// <returns>A string formatted with TMP rich text tags.</returns>
+        public static string ConvertHtmlToTMPRichText(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return input;
+
+            // Convert <span style="color: #xxxxxx;"> tags to <color=#xxxxxx>
+            string output = Regex.Replace(input, @"<span\s+style\s*=\s*""color\s*:\s*(#[0-9A-Fa-f]{6});?""\s*>", "<color=$1>");
+
+            // Replace closing </span> tags with </color>
+            output = Regex.Replace(output, @"</span>", "</color>");
+
+            // Replace <em> tags with <i> tags for italics
+            output = output.Replace("<em>", "<i>").Replace("</em>", "</i>");
+
+            // Replace <strong> tags with <b> tags for bold
+            output = output.Replace("<strong>", "<b>").Replace("</strong>", "</b>");
+
+            return output;
+        }
     }
 
 }
