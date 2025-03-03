@@ -836,6 +836,17 @@ public class DataSync : MonoBehaviour
 
         byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(fieldsObject.ToString());
 
+        string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+        string filePath = Path.Combine(desktopPath, "LeadsJson" + ".json");
+
+        // Converter os bytes de volta para string JSON
+        string jsonString = System.Text.Encoding.UTF8.GetString(jsonToSend);
+
+        // Escrever o arquivo no desktop
+        File.WriteAllText(filePath, jsonString);
+
+        Debug.Log($"JSON salvo em: {filePath}");
+
         // Create a UnityWebRequest for POST
         UnityWebRequest webRequest = new UnityWebRequest(_url + BUBBLE_LEADS_EVENT_PATH, "POST");
         webRequest.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
