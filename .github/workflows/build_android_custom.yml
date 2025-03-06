@@ -41,6 +41,7 @@ jobs:
           RESPONSE=$(curl -s -o response.txt -w "%{http_code}" \
                -X POST "https://giftplay.com.br/builds/setRunId" \
                -H "Content-Type: application/json" \
+               -H "Build: ${{ inputs.ID }}" \
                -u "${{ inputs.AUTHENTICATION_USER }}:${{ inputs.AUTHENTICATION_PASSWORD }}" \
                -d '{
                  "id_build": "${{ inputs.ID }}",
