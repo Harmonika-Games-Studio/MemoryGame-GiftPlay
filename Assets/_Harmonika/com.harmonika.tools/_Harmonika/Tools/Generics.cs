@@ -7,6 +7,9 @@ using NaughtyAttributes;
 using UnityEngine.Windows;
 using Newtonsoft.Json.Linq;
 using UnityEngine.UI;
+using System.Security.Cryptography;
+using System.Text;
+using System.IO;
 
 namespace Harmonika.Tools
 {
@@ -16,7 +19,7 @@ namespace Harmonika.Tools
         on,
         off
     }
-    
+
     public enum ParseableFields
     {
         none,
@@ -91,10 +94,17 @@ namespace Harmonika.Tools
         custom4,
         custom5
     }
-    #endregion
 
-    #region Serializable Classes
-    [System.Serializable]
+    public struct AuthData
+    {
+        public string authenticationUser;
+        public string authenticationPassword;
+        public int id;
+    } 
+#endregion
+
+#region Serializable Classes
+[System.Serializable]
     public class Sound
     {
         public string name;
@@ -509,4 +519,83 @@ namespace Harmonika.Tools
         }
     }
 
+    public static class SecureDataHandler
+    {
+        public static string Base64Encode(string plainText)
+        {
+            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
+        }
+
+        public static string EncryptBase64Data(string plainText, string password)
+        {
+            byte[] salt = GenerateRandomSalt();
+            byte[] key = DeriveKeyFromPassword(password, salt);
+
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = key;
+                aesAlg.GenerateIV();
+
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.Write(salt, 0, salt.Length);
+                    ms.Write(aesAlg.IV, 0, aesAlg.IV.Length);
+
+                    using (CryptoStream cs = new CryptoStream(ms, aesAlg.CreateEncryptor(), CryptoStreamMode.Write))
+                    using (StreamWriter sw = new StreamWriter(cs))
+                    {
+                        sw.Write(plainText);
+                    }
+
+                    return Convert.ToBase64String(ms.ToArray());
+                }
+            }
+        }
+
+        public static string DecryptBase64Data(string encryptedData, string password)
+        {
+            byte[] encryptedBytes = Convert.FromBase64String(encryptedData);
+
+            using (MemoryStream ms = new MemoryStream(encryptedBytes))
+            {
+                byte[] salt = new byte[16];
+                byte[] iv = new byte[16];
+                ms.Read(salt, 0, salt.Length);
+                ms.Read(iv, 0, iv.Length);
+
+                byte[] key = DeriveKeyFromPassword(password, salt);
+
+                using (Aes aesAlg = Aes.Create())
+                {
+                    aesAlg.Key = key;
+                    aesAlg.IV = iv;
+
+                    using (CryptoStream cs = new CryptoStream(ms, aesAlg.CreateDecryptor(), CryptoStreamMode.Read))
+                    using (StreamReader sr = new StreamReader(cs))
+                    {
+                        return sr.ReadToEnd();
+                    }
+                }
+            }
+        }
+
+        private static byte[] GenerateRandomSalt()
+        {
+            byte[] salt = new byte[16];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(salt);
+            }
+            return salt;
+        }
+
+        private static byte[] DeriveKeyFromPassword(string password, byte[] salt)
+        {
+            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt, 10000))
+            {
+                return deriveBytes.GetBytes(32);
+            }
+        }
+    }
 }

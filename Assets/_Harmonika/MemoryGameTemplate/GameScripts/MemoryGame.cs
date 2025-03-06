@@ -325,7 +325,7 @@ public class MemoryGame : MonoBehaviour
         _cardsList.Clear();
         _revealedPairs = 0;
 
-        AppManager.Instance.DataSync.SendLeads();
+        AppManager.Instance.DataSync.SaveLeads();
         }, 1f);
     }
 

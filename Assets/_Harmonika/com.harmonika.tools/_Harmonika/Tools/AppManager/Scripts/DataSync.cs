@@ -13,6 +13,7 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using NaughtyAttributes;
+using System.Net.Http;
 
 public class DataSync : MonoBehaviour
 {
@@ -140,7 +141,7 @@ public class DataSync : MonoBehaviour
 
     private void Start()
     {
-        Invoke(nameof(InitialConnect), .3f);
+        //Invoke(nameof(InitialConnect), .3f); //TEMP: Conecta ao iniciar o jogo
         if (_leadCaptationList.Count == 0)
         {
             Debug.LogWarning("No LeadCaptation Script found, if you are trying to capture Leads, please, assign the componente correctly");
@@ -152,12 +153,11 @@ public class DataSync : MonoBehaviour
             leadCaptation.OnSubmitEvent += AddDataToJObject;
         }
 
-        //_leadCaptationList[0].OnSubmitEvent += (JObject a) => SendLeads(); //gambiarra de teste. Pra quando n tiver nenhum jogo usando isso
-
         _syncDataButton.onClick.AddListener(() => ConnectToDatabase(true));
-        if (_syncPeriodically) PeriodicConnect();
+        //if (_syncPeriodically) PeriodicConnect(); //TEMP: Conecta periodicamente
     }
 
+    #region Saving Leads
     public void AddDataToJObject(string key, string value)
     {
         if (_leads.ContainsKey(key))
@@ -198,9 +198,9 @@ public class DataSync : MonoBehaviour
         _leadCaptationList.Add(leadCaptation);
     }
 
-    public void SendLeads()
+    public void SaveLeads()
     {
-        AppManager.Instance.DataSync.AddDataToJObject("dataHora", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+        AppManager.Instance.DataSync.AddDataToJObject("dataHora", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ss"));
 
         Dictionary<string, string> fields = new Dictionary<string, string>();
 
@@ -213,13 +213,126 @@ public class DataSync : MonoBehaviour
         SaveLocalData(_permanentLocalDataPath, fields);
         _leads = new();
     }
+    #endregion
 
-    public IEnumerator GetStatusFromDatabase()
+    public IEnumerator GetStatusFromDatabase(/*string id, Action<ProjectInfo> callback = null*/)
     {
-        if (_database == DataBase.Firebase)
-            yield return StartCoroutine(GetStatusFromFirestore());
-        else if (_database == DataBase.Bubble)
-            yield return StartCoroutine(GetStatusFromBubble(_appId.ToString()));
+        string encryptedJson = Resources.Load<TextAsset>("KEY").text;
+        string json = SecureDataHandler.DecryptBase64Data(encryptedJson, "SammViado2469");
+        Debug.Log($"Get Focking Godamn Status: \n\n{json}");
+
+        yield return null;
+        
+        /*
+        try
+        {
+            using (var client = new HttpClient())
+            {
+                string tokenBase64 = SecureDataHandler.Base64Encode($"{authenticationUser}:{authenticationPassword}");
+                client.DefaultRequestHeaders.Add("Authorization", $"Basic {tokenBase64}");
+                client.DefaultRequestHeaders.Add("Build", $"{id}");
+
+                string statusJson = client.GetStringAsync($"https://giftplay.com.br/builds/endPoint/{id}").Result;
+                Debug.Log("CustomBuild.cs -> Received json: " + statusJson);
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("CustomBuild.cs -> Error downloading json: " + e.Message);
+        }
+        */
+
+
+        /*
+        // Prepare the JSON data with the 'id' field
+        string jsonData = $"{{\"{nameof(id)}\": \"" + id + "\"}";
+
+        byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonData);
+
+        // Create a UnityWebRequest for POST
+        UnityWebRequest webRequest = new UnityWebRequest(_url + BUBBLE_PROJECT_INFO_EVENT_PATH, "POST");
+        webRequest.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
+        webRequest.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        webRequest.SetRequestHeader("Content-Type", "application/json");
+        webRequest.SetRequestHeader("Authorization", "Bearer " + BUBBLE_API_TOKEN);
+
+        // Send the request
+        yield return webRequest.SendWebRequest();
+
+        if (webRequest.result == UnityWebRequest.Result.ConnectionError || webRequest.result == UnityWebRequest.Result.ProtocolError)
+        {
+            Debug.LogError("Error: " + webRequest.error);
+            AppManager.Instance.ShowLeadsMessage("Banco de dados não encontrado.\nEntre em contato com o suporte.");
+            callback?.Invoke(null);
+        }
+        else
+        {
+            string jsonResponse = webRequest.downloadHandler.text;
+            Debug.Log("Received: " + jsonResponse);
+
+            try
+            {
+                JObject root = JObject.Parse(jsonResponse);
+
+                if ((string)root["status"] == "success" && root["response"]?["info"] != null)
+                {
+                    JObject infoJson = (JObject)root["response"]["info"];
+
+                    ProjectInfo projectInfo = new();
+
+                    projectInfo.liberado = infoJson[nameof(projectInfo.liberado)]?.ToString();
+                    projectInfo.projectTitle = infoJson[nameof(projectInfo.projectTitle)]?.ToString();
+
+                    Debug.Log($"ID: {id}, Name: {projectInfo.projectTitle}, Allowed:{projectInfo.liberado}, PaymentID: , DeviceID: , UserID: , DatabaseID: ");
+
+                    Debug.Log($"Properties in ProjectInfo: {string.Join(", ", typeof(ProjectInfo).GetProperties().Select(p => p.Name))}");
+
+                    //foreach (var property in typeof(ProjectInfo).GetProperties())
+                    //{
+                    //    var jsonKey = property.Name;
+                    //    var jsonValue = infoJson[jsonKey]?.ToString() ?? string.Empty;
+                    //    property.SetValue(projectInfo, jsonValue);
+                    //}
+
+                    if (bool.Parse(projectInfo.liberado))
+                    {
+                        SaveNewLocalDueDate();
+                        AppBlocker.Instance.IsBlocked = false;
+
+                    }
+                    else
+                    {
+                        Debug.Log("Subscription is not active. Access denied.");
+                        AppManager.Instance.ShowLeadsMessage("A sua licença expirou, entre em contato para regularizar a situação.");
+                        AppManager.Instance.BlockApplication(BlockType.LicenseNotActive);
+                    }
+
+                    // Invoke the callback with the parsed data
+                    callback?.Invoke(projectInfo);
+                }
+                else
+                {
+                    Debug.LogWarning("Response received but parsed object is null or incomplete.");
+
+                    // Invoke the callback with null if parsing fails
+                    callback?.Invoke(null);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Failed to parse response: " + e.Message);
+
+                // Invoke the callback with null on exception
+                callback?.Invoke(null);
+            }
+        }
+
+        if (_canSendLeads)
+        {
+            StartCoroutine(SyncLocalDataWithBubble());
+            _canSendLeads = false;
+        }
+        */
     }
 
     /// <summary>
@@ -332,7 +445,7 @@ public class DataSync : MonoBehaviour
             string json = File.ReadAllText(path);
             if (!string.IsNullOrEmpty(json))
             {
-                return JsonConvert.DeserializeObject<Serialization<List<Dictionary<string, string>>>>(json).Data;
+                return JsonConvert.DeserializeObject<Serialization<List<Dictionary<string, string>>>>(json).data;
             }
         }
         return new List<Dictionary<string, string>>();
@@ -882,11 +995,11 @@ public class DataSync : MonoBehaviour
 
     [System.Serializable] private class Serialization<T>
     {
-        public Serialization(T data)
+        public Serialization(T value)
         {
-            Data = data;
+            data = value;
         }
-        public T Data;
+        public T data;
     }
 }
 
