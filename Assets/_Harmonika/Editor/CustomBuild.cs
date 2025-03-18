@@ -6,14 +6,41 @@ using System.Net.Http;
 using System;
 using Harmonika.Tools;
 using System.Collections.Generic;
+using System.Text;
+using Newtonsoft.Json;
+
+[Serializable]
+public class AuthData
+{
+    public string authenticationUser;
+    public string authenticationPassword;
+    public int id;
+
+    public AuthData()
+    {
+        authenticationUser = "";
+        authenticationPassword = "";
+        id = 0;
+    }
+
+    public AuthData(string user, string password, int buildId)
+    {
+        authenticationUser = user;
+        authenticationPassword = password;
+        id = buildId;
+    }
+}
 
 public static class CustomBuild
 {
     public static void BuildWithCustomAssets()
     {
+        Debug.Log("CustomBuild.cs -> === STARTING CUSTOM BUILD ===");
+
         string authenticationUser = GetCommandLineArgument("-authenticationUser");
         string authenticationPassword = GetCommandLineArgument("-authenticationPassword");
         string id = GetCommandLineArgument("-id");
+        string configJson = "";
 
         // Ensure the Resources directory exists
         if (!Directory.Exists(HarmonikaConstants.RESOURCES_PATH))
@@ -27,17 +54,25 @@ public static class CustomBuild
             Directory.CreateDirectory(HarmonikaConstants.ANDROID_BUILD_PATH);
         }
 
-        string configJson = "";
+        // Save encrypted data
+        AuthData data = new();
+        data.authenticationUser = authenticationUser;
+        data.authenticationPassword = authenticationPassword;
+        data.id = int.Parse(id);
 
-        Debug.Log("CustomBuild.cs -> === STARTING CUSTOM BUILD ===");
+        string jsonData = JsonConvert.SerializeObject(data);
+        string encryptedData = SecureDataHandler.EncryptBase64Data(jsonData, "SammViado2469");
+
+        File.WriteAllText(Path.Combine(HarmonikaConstants.RESOURCES_PATH, "KEY.txt"), encryptedData);
 
         // Downloading JSON
         try
         {
             using (var client = new HttpClient())
             {
-                string tokenBase64 = Base64Encode($"{authenticationUser}:{authenticationPassword}");
+                string tokenBase64 = SecureDataHandler.Base64Encode($"{authenticationUser}:{authenticationPassword}");
                 client.DefaultRequestHeaders.Add("Authorization", $"Basic {tokenBase64}");
+                client.DefaultRequestHeaders.Add("Build", $"{id}");
 
                 configJson = client.GetStringAsync($"https://giftplay.com.br/builds/getGameConfig/{id}").Result;
                 Debug.Log("CustomBuild.cs -> Received json: " + configJson);
@@ -109,12 +144,6 @@ public static class CustomBuild
             }
         }
         return null;
-    }
-
-    public static string Base64Encode(string plainText)
-    {
-        var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(plainText);
-        return System.Convert.ToBase64String(plainTextBytes);
     }
 
     //public static string DownloadImage(string url, string name)

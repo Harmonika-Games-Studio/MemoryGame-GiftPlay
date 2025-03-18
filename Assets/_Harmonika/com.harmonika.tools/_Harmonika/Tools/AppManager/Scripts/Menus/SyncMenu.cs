@@ -34,7 +34,7 @@ public class SyncMenu : MonoBehaviour
     public void ShowMessage(string text)
     {
         _messageTxt.text = text; // TODO: Program a Toast Feature
-        InvokeUtils.Invoke(DisableMessage, 6f);
+        InvokeUtility.Invoke(6f, DisableMessage);
     }
 
     public void DisableMessage()

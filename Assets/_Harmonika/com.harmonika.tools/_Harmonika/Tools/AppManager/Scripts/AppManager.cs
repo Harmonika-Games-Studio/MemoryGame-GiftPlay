@@ -186,7 +186,7 @@ public class AppManager : MonoBehaviour
     public void ShowLeadsMessage(string text)
     {
         SyncMenu.ShowMessage(text);
-        InvokeUtils.Invoke(DisableLeadsMessage, 6f);
+        InvokeUtility.Invoke(6f, DisableLeadsMessage);
     }
 
     private void DisableLeadsMessage()

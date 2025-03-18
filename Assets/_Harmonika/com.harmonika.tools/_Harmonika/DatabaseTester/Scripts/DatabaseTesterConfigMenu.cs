@@ -12,7 +12,6 @@ public class DatabaseTesterConfigMenu : ConfigMenu
     {
         base.Awake();
         _inputAppID.onSubmit.AddListener(OnAppIDValueChanged);
-        _toggleTestVersion.onValueChanged.AddListener(OnToggleTestVersionValueChanged);
     }
 
     override protected void Start()
@@ -32,17 +31,10 @@ public class DatabaseTesterConfigMenu : ConfigMenu
         _inputAppID.text = value;
     }
 
-    void OnToggleTestVersionValueChanged(bool value)
-    {
-        AppManager.Instance.DataSync.TestVersion = value;
-    }
-
     void UpdateInputValues()
     {
         int appID = PlayerPrefs.GetInt("AppID", AppManager.Instance.DataSync.AppId);
-        bool testVersion = PlayerPrefs.GetInt("TestVersion", AppManager.Instance.DataSync.TestVersion ? 1 : 0) >= 1;
 
-        _toggleTestVersion.isOn = testVersion;
         _inputAppID.text = appID.ToString();
     }
 }

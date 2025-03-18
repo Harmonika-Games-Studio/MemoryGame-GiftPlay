@@ -13,43 +13,31 @@ using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 using NaughtyAttributes;
+using UnityEngine.Events;
 
 public class DataSync : MonoBehaviour
 {
     private const string NEW_ALLOWED_DATE_KEY = "NewAllowedDate";
     private const string TEST_URL = "https://www.google.com";
-    private const string FIRESTORE_API_KEY = "AIzaSyAKsGVs1xN5JKzv_CJLy_nr0lDpesZHK3Q";
-    private const string FIRESTORE_PROJECT_ID = "harmonikagames-eventos";
-    private const string BUBBLE_BASE_URL = "https://app.harmonikagames.com.br/api/1.1/wf";
-    private const string BUBBLE_TEST_URL = "https://app.harmonikagames.com.br/version-test/api/1.1/wf";
-    private const string BUBBLE_API_TOKEN = "80098fb946eaa832654166e173564c66";
-    private const string BUBBLE_LEADS_EVENT_PATH = "/leads_event";
-    private const string BUBBLE_PROJECT_INFO_EVENT_PATH = "/project_info_event";
-
+    private const string DATABASE_URL = "https://giftplay.com.br/";
+    private const string SENDLEADS_ENDPOINT = "/leads/send";
+    private const string GETSTATUS_ENDPOINT = "/builds/isBuildAtive";
     [SerializeField] private Button _syncDataButton;
 
     [BoxGroup("Configuration")][SerializeField] private int _appId;
     [BoxGroup("Configuration")][SerializeField] private UDateTime _maxAllowedDate;
-    [BoxGroup("Configuration")][SerializeField] private DataBase _database;
-    [BoxGroup("Configuration")][SerializeField] private bool _testVersion = true;
-    [BoxGroup("Configuration")][SerializeField] private bool _syncPeriodically = true;
+    [BoxGroup("Configuration")][SerializeField] private bool _syncPeriodically = false;
     [BoxGroup("Configuration")][SerializeField][ShowIf(nameof(_syncPeriodically))] private int _syncTime = 30;
 
     private JObject _leads = new();
     private UserInfo _userFields = new();
     private ProjectInfo _prjFields = new();
-    private List<LeadCaptation >_leadCaptationList = new();
+    private List<LeadCaptation> _leadCaptationList = new();
 
     private DateTime _newAllowedDate;
-    private string _appSubscriptionId;
-    private string _appDeviceUsedId;
-    private string _appUserId;
-    private string _appDatabaseId;
-    private string _documentName;
-    private string _documentId;
+    private string _authenticationToken;
     private string _tempLocalDataPath;
     private string _permanentLocalDataPath;
-    private string _url;
     private bool _isConnected;
     private bool _canSendLeads = false;
 
@@ -112,35 +100,26 @@ public class DataSync : MonoBehaviour
             PlayerPrefs.Save();
         }
     }
-
-    public bool TestVersion
-    {
-        get => _testVersion;
-        set
-        {
-            _testVersion = value;
-            UpdateDatabaseUrl();
-            PlayerPrefs.SetInt("TestVersion", _testVersion ? 1 : 0);
-            PlayerPrefs.Save();
-        }
-    }
     #endregion
 
-    private void Awake()
+    public virtual void Awake()
     {
-        UpdateDatabaseUrl();
         Setup();
     }
 
-    private void OnDestroy()
+    public virtual void OnDestroy()
     {
         // This is a good practice, though it's not strictly necessary in this case since this object is marked as 'Don't Destroy On Load'.
         _syncDataButton.onClick.RemoveAllListeners();
     }
 
-    private void Start()
+    public virtual void Start()
     {
         Invoke(nameof(InitialConnect), .3f);
+
+        _syncDataButton.onClick.AddListener(() => ConnectToDatabase(true));
+        if (_syncPeriodically) PeriodicConnect();
+
         if (_leadCaptationList.Count == 0)
         {
             Debug.LogWarning("No LeadCaptation Script found, if you are trying to capture Leads, please, assign the componente correctly");
@@ -151,31 +130,29 @@ public class DataSync : MonoBehaviour
         {
             leadCaptation.OnSubmitEvent += AddDataToJObject;
         }
-
-        //_leadCaptationList[0].OnSubmitEvent += (JObject a) => SendLeads(); //gambiarra de teste. Pra quando n tiver nenhum jogo usando isso
-
-        _syncDataButton.onClick.AddListener(() => ConnectToDatabase(true));
-        if (_syncPeriodically) PeriodicConnect();
     }
 
     public void AddDataToJObject(string key, string value)
     {
-        if (_leads.ContainsKey(key))
-            _leads[key] = value;
-        else
-        _leads.Add(key, value);
-    }
-    
-    public void AddDataToJObject(string key, int value)
-    {
+        Debug.Log($"key:{key} value:{value}");
         if (_leads.ContainsKey(key))
             _leads[key] = value;
         else
             _leads.Add(key, value);
     }
-    
+
+    public void AddDataToJObject(string key, int value)
+    {
+        Debug.Log($"key:{key} value:{value}");
+        if (_leads.ContainsKey(key))
+            _leads[key] = value;
+        else
+            _leads.Add(key, value);
+    }
+
     public void AddDataToJObject(string key, float value)
     {
+        Debug.Log($"key:{key} value:{value}");
         if (_leads.ContainsKey(key))
             _leads[key] = value;
         else
@@ -198,7 +175,7 @@ public class DataSync : MonoBehaviour
         _leadCaptationList.Add(leadCaptation);
     }
 
-    public void SendLeads()
+    public void SaveLeads()
     {
         AppManager.Instance.DataSync.AddDataToJObject("dataHora", DateTime.Now.ToString("yyyy-MM-ddTHH:mm:ssZ"));
 
@@ -209,17 +186,18 @@ public class DataSync : MonoBehaviour
             fields[property.Name] = property.Value.ToString();
         }
 
+#if !UNITY_WEBGL
         SaveLocalData(_tempLocalDataPath, fields);
         SaveLocalData(_permanentLocalDataPath, fields);
+#else
+      SendLeads(fields);
+#endif
         _leads = new();
     }
 
-    public IEnumerator GetStatusFromDatabase()
+    public void SendLeads(Dictionary<string, string> data, UnityAction<bool> callback = null)
     {
-        if (_database == DataBase.Firebase)
-            yield return StartCoroutine(GetStatusFromFirestore());
-        else if (_database == DataBase.Bubble)
-            yield return StartCoroutine(GetStatusFromBubble(_appId.ToString()));
+        StartCoroutine(SendLeadsRoutine(data, callback));
     }
 
     /// <summary>
@@ -228,6 +206,9 @@ public class DataSync : MonoBehaviour
     /// <returns>Returns true if the Internet connection is available; otherwise, returns false.</returns>
     public static bool IsInternetAvailable()
     {
+#if UNITY_WEBGL
+        return true;
+#endif
         try
         {
             using (var client = new WebClient())
@@ -248,19 +229,33 @@ public class DataSync : MonoBehaviour
     {
         _tempLocalDataPath = Application.persistentDataPath + "/tempLocalData.json";
         _permanentLocalDataPath = Application.persistentDataPath + "/permanentLocalData.json";
+        _authenticationToken = GetAuthenticationToken();
+        Debug.Log("_authenticationToken: " + _authenticationToken);
     }
 
-    private void UpdateDatabaseUrl()
+    string GetAuthenticationToken()
     {
-        _url = _testVersion ? BUBBLE_TEST_URL : BUBBLE_BASE_URL;
+        string filePath = Path.Combine(HarmonikaConstants.RESOURCES_PATH, "KEY.txt");
+
+        if (!File.Exists(filePath))
+        {
+            Debug.LogError("Auth file KEY.txt not found at: " + filePath);
+            return null;
+        }
+        
+        string encryptedData = File.ReadAllText(filePath);
+
+
+        string data = SecureDataHandler.DecryptBase64Data(encryptedData, "SammViado2469");
+        return data;
     }
 
     private void PeriodicConnect()
     {
         if (TempDataCount > 0)
             ConnectToDatabase(true);
-        
-        InvokeUtils.Invoke(PeriodicConnect, _syncTime);
+
+        InvokeUtility.Invoke(_syncTime, PeriodicConnect);
     }
 
     private void InitialConnect()
@@ -272,11 +267,9 @@ public class DataSync : MonoBehaviour
     {
         //_canSendLeads is set to true only when this function is called from Sync Button
         _canSendLeads = sendLeads;
+        IsSyncButtonInteractable = false;
 
-        if (_database == DataBase.Firebase)
-            StartCoroutine(ConnectToFirestore());
-        else if (_database == DataBase.Bubble)
-            StartCoroutine(ConnectToBubble());
+        StartCoroutine(ConnectToBubble());
     }
 
     private void SaveNewLocalDueDate()
@@ -286,12 +279,6 @@ public class DataSync : MonoBehaviour
         PlayerPrefs.Save();
 
         Debug.Log($"Salvou nova data para dia {_newAllowedDate}");
-    }
-
-    private void SetDocumentId(string documentId)
-    {
-        _documentId = documentId;
-        StartCoroutine(SyncLocalDataWithFirestore());
     }
 
     private void RemoveLocalData(Dictionary<string, string> fields)
@@ -338,296 +325,16 @@ public class DataSync : MonoBehaviour
         return new List<Dictionary<string, string>>();
     }
 
-    //Firebase
-    IEnumerator ConnectToFirestore() 
-    {
-        if (IsInternetAvailable())
-        {
-            yield return StartCoroutine(GetStatusFromFirestore());
-        }
-        else
-        {
-            Debug.LogWarning("No internet connection.");
-
-            if (PlayerPrefs.HasKey(NEW_ALLOWED_DATE_KEY))
-            {
-                Debug.Log($"Data atual: {DateTime.Now}, Data m�xima permitida: {PlayerPrefs.GetString(NEW_ALLOWED_DATE_KEY)}");
-
-                if (IsNewAllowedDateExpired)
-                {
-                    AppManager.Instance.BlockApplication(BlockType.NoConnectionAndDueDate);
-                }
-                else
-                {
-                    AppManager.Instance.ShowLeadsMessage("Sem conex�o com a internet. Verifique sua conex�o.");
-                }
-
-            }
-            else if (DateTime.Now.Date > _maxAllowedDate.dateTime)
-            {
-                Debug.Log($"Data atual: {DateTime.Now}, Data m�xima permitida: {_maxAllowedDate.dateTime}");
-                AppManager.Instance.BlockApplication(BlockType.NoConnectionAndDueDate);
-            }
-            else
-            {
-                AppManager.Instance.ShowLeadsMessage("Sem conex�o com a internet. Verifique sua conex�o.");
-            }
-        }
-
-    }
-    
-    IEnumerator GetStatusFromFirestore()
-    {
-        // Desativa��o do Bot�o
-        _syncDataButton.interactable = false;
-
-        // Cria��o da URL
-        string url = $"https://firestore.googleapis.com/v1/projects/{FIRESTORE_PROJECT_ID}/databases/(default)/documents:runQuery?key={FIRESTORE_API_KEY}";
-        Debug.Log($"Sending request to URL: {url}");
-
-        // Defini��o da Consulta JSON
-        string jsonQuery = $@"
-    {{
-        'structuredQuery': {{
-            'from': [{{
-                'collectionId': 'apps'
-            }}],
-            'where': {{
-                'fieldFilter': {{
-                    'field': {{ 'fieldPath': 'id' }},
-                    'op': 'EQUAL',
-                    'value': {{ 'integerValue': '{_appId}' }}
-                }}
-            }}
-        }}
-    }}";
-
-        // Prepara��o e envio da Requisi��o
-        UnityWebRequest request = UnityWebRequest.PostWwwForm(url, jsonQuery);
-        request.SetRequestHeader("Content-Type", "application/json");
-        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonQuery);
-        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = new DownloadHandlerBuffer();
-
-        yield return request.SendWebRequest();
-
-        // Tratamento de Erros
-        if (request.result == UnityWebRequest.Result.Success)
-        {
-            string responseBody = request.downloadHandler.text;
-            JArray jsonArray = JArray.Parse(responseBody);
-
-            if (jsonArray.Count > 0)
-            {
-                var document = jsonArray[0]["document"];
-
-                _documentName = document["name"].ToString();
-
-                string id = document["fields"]["id"]["integerValue"].ToString();
-                string name = document["fields"]["name"]["stringValue"].ToString();
-                bool allowed = bool.Parse(document["fields"]["liberado"]["booleanValue"].ToString());
-                _appDeviceUsedId = document["fields"]["deviceid"]["stringValue"].ToString();
-                _appUserId = document["fields"]["userid"]["stringValue"].ToString();
-                _appDatabaseId = document["fields"]["databaseid"]["stringValue"].ToString();
-
-                Debug.Log($"ID: {id}, Name: {name}, Allowed:{allowed}, PaymentID: {_appSubscriptionId}, DeviceID: {_appDeviceUsedId}, UserID: {_appUserId}, DatabaseID: {_appDatabaseId}");
-
-                string currentDeviceId = SystemInfo.deviceUniqueIdentifier;
-
-                if (string.IsNullOrEmpty(_appDeviceUsedId))
-                {
-                    StartCoroutine(UpdateDeviceIdInFirestore(currentDeviceId, allowed));
-                }
-                else if (_appDeviceUsedId == currentDeviceId)
-                {
-                    if (allowed)
-                    {
-                        SaveNewLocalDueDate();
-                        AppBlocker.Instance.IsBlocked = false;
-
-                        if (!string.IsNullOrEmpty(_appDatabaseId))
-                        {
-                            SetDocumentId(_appDatabaseId);
-                        }
-                        else
-                        {
-                            AppManager.Instance.ShowLeadsMessage("Banco de dados não encontrado.\nEntre em contato com o suporte.");
-                        }
-                    }
-                    else
-                    {
-                        Debug.Log("Subscription is not active. Access denied.");
-                        AppManager.Instance.ShowLeadsMessage("A sua licença expirou, entre em contato para regularizar a situação.");
-                        AppManager.Instance.BlockApplication(BlockType.LicenseNotActive);
-                    }
-                }
-                else
-                {
-                    yield return StartCoroutine(UpdateDeviceIdInFirestore(currentDeviceId, allowed));
-                }
-
-                _syncDataButton.interactable = true;
-                yield break;
-            }
-        }
-        else
-        {
-            Debug.LogError("Error getting documents: " + request.error);
-            AppManager.Instance.ShowLeadsMessage("Erro ao acessar o banco de dados.\nCheque sua conex�o com internet ou entre em contato com o suporte.");
-            AppManager.Instance.BlockApplication(BlockType.NoConnectionAndDueDate);
-            Debug.LogError("No matching documents found.");
-            AppManager.Instance.ShowLeadsMessage("Aplicativo n�o encontrado.\nEntre em contato com o suporte.");
-            _syncDataButton.interactable = true;
-        }
-    }
-
-    IEnumerator UpdateDeviceIdInFirestore(string deviceId, bool allowed)
-    {
-        string url = $"https://firestore.googleapis.com/v1/{_documentName}?key={FIRESTORE_API_KEY}&updateMask.fieldPaths=deviceid";
-        Debug.Log($"Sending update request to URL: {url}");
-
-        string jsonBody = $"{{ \"fields\": {{ \"deviceid\": {{ \"stringValue\": \"{deviceId}\" }} }} }}";
-
-        UnityWebRequest request = new UnityWebRequest(url, "PATCH");
-        byte[] bodyRaw = new System.Text.UTF8Encoding().GetBytes(jsonBody);
-        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = new DownloadHandlerBuffer();
-        request.SetRequestHeader("Content-Type", "application/json");
-
-        yield return request.SendWebRequest();
-
-        if (request.result != UnityWebRequest.Result.Success)
-        {
-            Debug.LogError("Error updating device ID: " + request.error);
-            AppManager.Instance.ShowLeadsMessage("Erro ao atualizar o dispositivo.\nCheque sua conex�o com internet ou entre em contato com o suporte.");
-        }
-        else
-        {
-            Debug.Log("Device ID updated successfully.");
-            if (allowed)
-            {
-                if (!string.IsNullOrEmpty(_appDatabaseId))
-                {
-                    SetDocumentId(_appDatabaseId);
-                }
-                else
-                {
-                    AppManager.Instance.ShowLeadsMessage("Banco de dados n�o encontrado.\nEntre em contato com o suporte.");
-                }
-            }
-            else
-            {
-                Debug.Log("Subscription is not active. Access denied.");
-                AppManager.Instance.ShowLeadsMessage("A sua licen�a expirou, entre em contato para regularizar a situa��o.");
-            }
-        }
-    }
-
-    IEnumerator SyncLocalDataWithFirestore()
-    {
-
-        List<Dictionary<string, string>> localData = LoadLocalData(_tempLocalDataPath);
-        if (localData != null)
-        {
-            int successCount = 0;
-            AppManager.Instance.SyncMenu.TransferingData = true;
-
-            bool documentExists = false;
-            yield return StartCoroutine(CheckIfDocumentExists((exists) =>
-            {
-                if (exists)
-                {
-                    documentExists = true;
-                }
-            }));
-
-            if (documentExists)
-            {
-                //start transfer UI
-
-                foreach (var fields in localData)
-                {
-
-                    yield return StartCoroutine(SaveDocumentFirebase(fields, (success) =>
-                    {
-                        if (success)
-                        {
-                            successCount++;
-                        }
-                        AppManager.Instance.SyncMenu.UpdateDataCount();
-                    }));
-                }
-                Debug.Log(successCount + " dados locais foram salvos no banco com sucesso.");
-            }
-
-            AppManager.Instance.SyncMenu.TransferingData = false;
-            AppManager.Instance.ShowLeadsMessage($"Transfer�ncia de dados realizada com sucesso!\n\nQuantidade de dados tranferidos: {successCount}");
-        }
-    }
-
-    IEnumerator SaveDocumentFirebase(Dictionary<string, string> fields, System.Action<bool> callback)
-    {
-        string url = $"https://firestore.googleapis.com/v1/projects/{FIRESTORE_PROJECT_ID}/databases/(default)/documents/databases/{_documentId}/leads?key={FIRESTORE_API_KEY}";
-
-        JObject jsonBody = new JObject();
-        JObject fieldsObject = new JObject();
-
-        foreach (var field in fields)
-        {
-            fieldsObject[field.Key] = new JObject { { "stringValue", field.Value } };
-        }
-
-        jsonBody["fields"] = fieldsObject;
-
-        UnityWebRequest request = new UnityWebRequest(url, "POST");
-        byte[] bodyRaw = new System.Text.UTF8Encoding().GetBytes(jsonBody.ToString());
-        request.uploadHandler = new UploadHandlerRaw(bodyRaw);
-        request.downloadHandler = new DownloadHandlerBuffer();
-        request.SetRequestHeader("Content-Type", "application/json");
-
-        yield return request.SendWebRequest();
-
-        if (request.result != UnityWebRequest.Result.Success)
-        {
-            Debug.LogError("Error saving document: " + request.error);
-            callback(false);
-        }
-        else
-        {
-            Debug.Log("Document saved successfully: " + request.downloadHandler.text);
-            RemoveLocalData(fields); // Remove local data if the save is successful
-            callback(true);
-        }
-    }
-
-    IEnumerator CheckIfDocumentExists(System.Action<bool> callback)
-    {
-        string url = $"https://firestore.googleapis.com/v1/projects/{FIRESTORE_PROJECT_ID}/databases/(default)/documents/databases/{_documentId}?key={FIRESTORE_API_KEY}";
-
-        UnityWebRequest request = UnityWebRequest.Get(url);
-
-        yield return request.SendWebRequest();
-
-        if (request.result != UnityWebRequest.Result.Success)
-        {
-            callback(false);
-        }
-        else
-        {
-            callback(true);
-        }
-    }
-
-    //Bubble
     IEnumerator ConnectToBubble()
     {
         if (IsInternetAvailable())
         {
-            yield return StartCoroutine(GetStatusFromBubble(_appId.ToString()));
+            yield return StartCoroutine(GetStatusFromDatabase());
         }
         else
         {
             Debug.LogWarning("No internet connection.");
+            IsSyncButtonInteractable = true;
 
             if (PlayerPrefs.HasKey(NEW_ALLOWED_DATE_KEY))
             {
@@ -652,23 +359,18 @@ public class DataSync : MonoBehaviour
             {
                 AppManager.Instance.ShowLeadsMessage("Sem conexão com a internet. Verifique sua conexão.");
             }
-        }
 
+        }
     }
 
-    IEnumerator GetStatusFromBubble(string id, Action<ProjectInfo> callback = null)
+    public IEnumerator GetStatusFromDatabase(Action<ProjectInfo> callback = null)
     {
-        // Prepare the JSON data with the 'id' field
-        string jsonData = $"{{\"{nameof(id)}\": \"" + id + "\"}";
-
-        byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(jsonData);
 
         // Create a UnityWebRequest for POST
-        UnityWebRequest webRequest = new UnityWebRequest(_url + BUBBLE_PROJECT_INFO_EVENT_PATH, "POST");
-        webRequest.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
-        webRequest.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        UnityWebRequest webRequest = new UnityWebRequest(DATABASE_URL + GETSTATUS_ENDPOINT + _appId.ToString(), "GET");
+        webRequest.downloadHandler = new DownloadHandlerBuffer();
         webRequest.SetRequestHeader("Content-Type", "application/json");
-        webRequest.SetRequestHeader("Authorization", "Bearer " + BUBBLE_API_TOKEN);
+        webRequest.SetRequestHeader("Authorization", "Basic " + _authenticationToken);
 
         // Send the request
         yield return webRequest.SendWebRequest();
@@ -697,7 +399,7 @@ public class DataSync : MonoBehaviour
                     projectInfo.liberado = infoJson[nameof(projectInfo.liberado)]?.ToString();
                     projectInfo.projectTitle = infoJson[nameof(projectInfo.projectTitle)]?.ToString();
 
-                    Debug.Log($"ID: {id}, Name: {projectInfo.projectTitle}, Allowed:{projectInfo.liberado}, PaymentID: , DeviceID: , UserID: , DatabaseID: ");
+                    Debug.Log($"ID: {_appId.ToString()}, Name: {projectInfo.projectTitle}, Allowed:{projectInfo.liberado}, PaymentID: , DeviceID: , UserID: , DatabaseID: ");
 
                     Debug.Log($"Properties in ProjectInfo: {string.Join(", ", typeof(ProjectInfo).GetProperties().Select(p => p.Name))}");
 
@@ -741,13 +443,16 @@ public class DataSync : MonoBehaviour
             }
         }
 
-        if (_canSendLeads) {
-            StartCoroutine(SyncLocalDataWithBubble());
+        if (_canSendLeads)
+        {
+            StartCoroutine(SyncLocalDataWithDatabase());
             _canSendLeads = false;
         }
+
+        IsSyncButtonInteractable = true;
     }
 
-    IEnumerator SyncLocalDataWithBubble()
+    IEnumerator SyncLocalDataWithDatabase()
     {
 
         List<Dictionary<string, string>> localData = LoadLocalData(_tempLocalDataPath);
@@ -756,131 +461,110 @@ public class DataSync : MonoBehaviour
             int successCount = 0;
             AppManager.Instance.SyncMenu.TransferingData = true;
 
-            bool documentExists = false;
-            yield return StartCoroutine(CheckIfDocumentExists((exists) =>
+            foreach (var fields in localData)
             {
-                if (exists)
-                {
-                    documentExists = true;
-                }
-            }));
 
-            if (documentExists)
-            {
-                foreach (var fields in localData)
-                {
-
-                    yield return StartCoroutine(SendLeadsToBubble(fields, (success) =>
+                yield return StartCoroutine(SendLeadsToDatabase(fields, (success) => {
+                    if (success)
                     {
-                        if (success)
-                        {
-                            successCount++;
-                        }
-                        AppManager.Instance.SyncMenu.UpdateDataCount();
-                    }));
-                }
-                Debug.Log(successCount + " dados locais foram salvos no banco com sucesso.");
+                        successCount++;
+                    }
+                    AppManager.Instance.SyncMenu.UpdateDataCount();
+                }));
             }
+            Debug.Log(successCount + " dados locais foram salvos no banco com sucesso.");
 
             AppManager.Instance.SyncMenu.TransferingData = false;
             AppManager.Instance.ShowLeadsMessage($"Transferência de dados realizada com sucesso!\n\nQuantidade de dados tranferidos: {successCount}");
         }
     }
 
-    IEnumerator SendLeadsToBubble(Dictionary<string, string> fields, System.Action<bool> callback)
+    IEnumerator SendLeadsRoutine(Dictionary<string, string> data, UnityAction<bool> callback = null)
+    {
+
+        if (data != null)
+        {
+            AppManager.Instance.SyncMenu.TransferingData = true;
+
+            yield return StartCoroutine(SendLeadsToDatabase(data, (success) =>
+            {
+                if (success)
+                {
+                    callback?.Invoke(true);
+                }
+                else
+                {
+                    callback?.Invoke(false);
+                    InvokeUtility.Invoke(1f, () => SendLeads(data, callback));
+                }
+                AppManager.Instance.SyncMenu.UpdateDataCount();
+            }));
+        }
+    }
+
+    IEnumerator SendLeadsToDatabase(Dictionary<string, string> fields, System.Action<bool> callback)
     {
         bool success = false;
         LoadingScript.Instance.Loading = true;
 
-        // Prepare the JSON data
-        string jsonData = "{" +
-            "\"cargo\": \"\"," +
-            "\"autorizoContato\": \"\"," +
-            "\"cep\": \"\"," +
-            "\"cidade\": \"\"," +
-            "\"cnpj\": \"\"," +
-            "\"cpf\": \"\"," +
-            "\"dataNascimento\": \"\"," +
-            "\"email\": \"\"," +
-            "\"empresa\": \"\"," +
-            "\"estado\": \"\"," +
-            "\"idade\": \"\"," +
-            "\"id\": 0," +
-            "\"pontos\": 0," +
-            "\"nome\": \"\"," +
-            "\"telefone\": \"\"," +
-            "\"brinde\": \"\"," +
-            "\"dataHora\": \"\"," +
-            "\"tempo\": 0," +
-            "\"ganhou\": \"\"," +
-            "\"custom1\": \"\"," +
-            "\"custom2\": \"\"," +
-            "\"custom3\": \"\"," +
-            "\"custom4\": \"\"," +
-            "\"custom5\": \"\"" +
-        "}";
+        JObject leadObject = JObject.FromObject(fields);
 
-        JObject fieldsObject = JObject.Parse(jsonData);
-        fieldsObject["id"] = _appId;
+        JObject mainObject = new JObject();
+        mainObject["id_build"] = _appId;
 
-        foreach (var field in fields)
-        {
-            fieldsObject[field.Key] = field.Value;
-        }
+        JArray dataArray = new JArray();
+        dataArray.Add(leadObject);
 
-        // Optionally, log the final userInfo JObject
-        Debug.Log("Final userInfo JSON: " + fieldsObject.ToString());
+        mainObject["data"] = dataArray;
 
-        LoadingScript.Instance.Loading = false;
+        Debug.Log("Final JSON to send: " + mainObject.ToString());
 
+        byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(mainObject.ToString());
 
-        byte[] jsonToSend = new System.Text.UTF8Encoding().GetBytes(fieldsObject.ToString());
-
-        string desktopPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
-        string filePath = Path.Combine(desktopPath, "LeadsJson" + ".json");
-
-        // Converter os bytes de volta para string JSON
-        string jsonString = System.Text.Encoding.UTF8.GetString(jsonToSend);
-
-        // Escrever o arquivo no desktop
-        File.WriteAllText(filePath, jsonString);
-
-        Debug.Log($"JSON salvo em: {filePath}");
-
-        // Create a UnityWebRequest for POST
-        UnityWebRequest webRequest = new UnityWebRequest(_url + BUBBLE_LEADS_EVENT_PATH, "POST");
-        webRequest.uploadHandler = (UploadHandler)new UploadHandlerRaw(jsonToSend);
-        webRequest.downloadHandler = (DownloadHandler)new DownloadHandlerBuffer();
+        UnityWebRequest webRequest = new UnityWebRequest(DATABASE_URL + SENDLEADS_ENDPOINT, "POST");
+        webRequest.uploadHandler = new UploadHandlerRaw(jsonToSend);
+        webRequest.downloadHandler = new DownloadHandlerBuffer();
         webRequest.SetRequestHeader("Content-Type", "application/json");
-        webRequest.SetRequestHeader("Authorization", "Bearer " + BUBBLE_API_TOKEN);
+        webRequest.SetRequestHeader("Authorization", "Basic " + _authenticationToken);
 
-        // Send the request
         yield return webRequest.SendWebRequest();
 
-        // Verifique o código HTTP da resposta
         if (webRequest.responseCode == 200)
         {
-            Debug.Log("Requisi��o enviada com sucesso. C�digo HTTP 200 recebido.");
-            success = true;
+            try
+            {
+                var jsonResponse = JObject.Parse(webRequest.downloadHandler.text);
+                Debug.Log("Server response: " + jsonResponse.ToString());
 
-            // Log da resposta (opcional)
-            Debug.Log("Resposta do servidor: " + webRequest.downloadHandler.text);
-            RemoveLocalData(fields); // Remove local data if the save is successful
-
+                if (jsonResponse["status"]?.ToString() == "success")
+                {
+                    Debug.Log("Request sent successfully and lead saved on the server.");
+                    success = true;
+                    RemoveLocalData(fields);
+                }
+                else
+                {
+                    Debug.LogError("The server returned an unexpected status or was not successful.");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Error parsing response: " + e.Message);
+            }
         }
         else
         {
-            Debug.LogError($"Erro: C�digo HTTP {webRequest.responseCode}. Tentando novamente...");
-            Debug.LogError("Erro detalhado: " + webRequest.error);
+            Debug.LogError($"Error: HTTP Code {webRequest.responseCode}. Retrying...");
+            Debug.LogError("Detailed error: " + webRequest.error);
         }
 
-
         callback?.Invoke(success);
-
         LoadingScript.Instance.Loading = false;
+        yield return null;
     }
 
-    [System.Serializable] private class Serialization<T>
+    [System.Serializable]
+    private class Serialization<T>
     {
         public Serialization(T data)
         {
@@ -967,10 +651,4 @@ public class ProjectInfo
     public string projectTitle;
     //public string videosList;
     //public string webGameFrame;
-}
-
-public enum DataBase
-{
-    Bubble,
-    Firebase
 }

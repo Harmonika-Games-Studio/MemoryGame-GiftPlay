@@ -9,6 +9,23 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
+[System.Serializable]
+public class MemoryGameConfig
+{
+    public string cardBack;
+    public List<string> cardsList;
+    public string userLogo;
+    public StorageItemConfig[] storageItems;
+    public LeadDataConfig[] leadDataConfig;
+    public string gameName;
+    public string primaryColor;
+    public string secondaryColor;
+    public string tertiaryColor;
+    public string neutralColor;
+    public int gameTime;
+    public int memorizationTime;
+}
+
 public class JsonDeserializedConfig
 {
     public string gameName;
@@ -313,7 +330,7 @@ public class MemoryGame : MonoBehaviour
         AppManager.Instance.DataSync.AddDataToJObject("tempo", tempo);
         AppManager.Instance.DataSync.AddDataToJObject("pontos", (int)Math.Floor(_config.gameTime - tempo));
 
-        InvokeUtils.Invoke(() =>
+        InvokeUtility.Invoke(1f, () =>
         {
             if (win) WinGame(prizeName);
             else LoseGame();
@@ -325,8 +342,8 @@ public class MemoryGame : MonoBehaviour
         _cardsList.Clear();
         _revealedPairs = 0;
 
-        AppManager.Instance.DataSync.SendLeads();
-        }, 1f);
+        AppManager.Instance.DataSync.SaveLeads();
+        });
     }
 
     private void WinGame(string prizeName = null)

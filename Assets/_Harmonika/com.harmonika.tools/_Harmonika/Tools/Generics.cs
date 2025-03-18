@@ -1,22 +1,23 @@
+ï»¿using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using NaughtyAttributes;
-using UnityEngine.Windows;
-using Newtonsoft.Json.Linq;
 using UnityEngine.UI;
 
 namespace Harmonika.Tools
 {
-    #region Serializable Enums
+    #region Enums
     public enum Turn
     {
         on,
         off
     }
-    
+
     public enum ParseableFields
     {
         none,
@@ -66,8 +67,8 @@ namespace Harmonika.Tools
 
     public enum LeadID
     {
-        cargo,
         autorizoContato,
+        cargo,
         cep,
         cidade,
         cnpj,
@@ -77,14 +78,8 @@ namespace Harmonika.Tools
         empresa,
         estado,
         idade,
-        id,
-        pontos,
         nome,
         telefone,
-        brinde,
-        dataHora,
-        tempo,
-        ganhou,
         custom1,
         custom2,
         custom3,
@@ -121,24 +116,6 @@ namespace Harmonika.Tools
         public CanvasGroup Group { get => group; }
     }
 
-
-    [System.Serializable]
-    public class MemoryGameConfig
-    {
-        public string cardBack;
-        public List<string> cardsList;
-        public string userLogo;
-        public StorageItemConfig[] storageItems;
-        public LeadDataConfig[] leadDataConfig;
-        public string gameName;
-        public string primaryColor;
-        public string secondaryColor;
-        public string tertiaryColor;
-        public string neutralColor;
-        public int gameTime;
-        public int memorizationTime;
-    }
-
     [System.Serializable]
     public class StorageItemConfig
     {
@@ -167,9 +144,9 @@ namespace Harmonika.Tools
                 List<LeadDataConfig> leadDataConfig = new List<LeadDataConfig>
             {
                 new() { fieldName = "nome", id = LeadID.nome, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaUpper, ParseableFields.none, "Sr. Harmonika")},
-                new() { fieldName = "idade", id = LeadID.idade, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "none", "Apenas Números")},
+                new() { fieldName = "idade", id = LeadID.idade, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "none", "Apenas NÃºmeros")},
                 new() { fieldName = "telefone", id = LeadID.telefone, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.Numeric, ParseableFields.phone, "(00) 00000-0000")},
-                new() { fieldName = "cpf", id = LeadID.id, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "cpf", "000.000.000-00")},
+                new() { fieldName = "cpf", id = LeadID.cpf, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new("Numeric", "cpf", "000.000.000-00")},
                 new() { fieldName = "email", id = LeadID.email, isOptional = false, inputType = LeadInputType.InputField, inputDataConfig = new(KeyboardType.AlphaLowerEmail, ParseableFields.none, "exemplo@harmonika.com")}
             };
 
@@ -204,14 +181,14 @@ namespace Harmonika.Tools
         }
     }
 
-    public static class InvokeUtils
+    public static class InvokeUtility
     {
         /// <summary>
         /// Invokes an Action after a delay, similar to MonoBehaviour's Invoke but using an Action instead of a string.
         /// </summary>
         /// <param name="action">The Action to execute after the delay.</param>
         /// <param name="delay">The delay time in seconds before invoking the Action.</param>
-        public static void Invoke(Action action, float delay)
+        public static void Invoke(float delay, Action action)
         {
             if (action == null)
             {
@@ -240,7 +217,7 @@ namespace Harmonika.Tools
         }
     }
 
-    public static class HarmonikaExtension
+    public static class HarmonikaExtensionMethods
     {
         /// <summary>
         /// Converts a hexadecimal string to a Color.
@@ -297,14 +274,14 @@ namespace Harmonika.Tools
         /// <returns>True if the CPF is valid, otherwise false.</returns>
         public static bool ValidateCPF(this string value)
         {
-            // Remove caracteres não numéricos
+            // Remove caracteres nï¿½o numï¿½ricos
             string cpf = new string(value.Where(char.IsDigit).ToArray());
 
-            // O CPF deve ter 11 dígitos e não pode ser uma sequência de números idênticos
+            // O CPF deve ter 11 dï¿½gitos e nï¿½o pode ser uma sequï¿½ncia de nï¿½meros idï¿½nticos
             if (cpf.Length != 11 || cpf.All(c => c == cpf[0]))
                 return false;
 
-            // Calcula o primeiro dígito verificador
+            // Calcula o primeiro dï¿½gito verificador
             int sum = 0;
             for (int i = 0; i < 9; i++)
                 sum += (cpf[i] - '0') * (10 - i);
@@ -312,11 +289,11 @@ namespace Harmonika.Tools
             int firstDigit = (sum * 10) % 11;
             if (firstDigit == 10) firstDigit = 0;
 
-            // Verifica o primeiro dígito
+            // Verifica o primeiro dï¿½gito
             if (firstDigit != (cpf[9] - '0'))
                 return false;
 
-            // Calcula o segundo dígito verificador
+            // Calcula o segundo dï¿½gito verificador
             sum = 0;
             for (int i = 0; i < 10; i++)
                 sum += (cpf[i] - '0') * (11 - i);
@@ -324,7 +301,7 @@ namespace Harmonika.Tools
             int secondDigit = (sum * 10) % 11;
             if (secondDigit == 10) secondDigit = 0;
 
-            // Verifica o segundo dígito
+            // Verifica o segundo dï¿½gito
             return secondDigit == (cpf[10] - '0');
         }
 
@@ -335,36 +312,36 @@ namespace Harmonika.Tools
         /// <returns>True if the CNPJ is valid according to the Brazilian standard, otherwise false.</returns>
         public static bool ValidateCNPJ(this string value)
         {
-            // Remove caracteres não numéricos
+            // Remove caracteres nï¿½o numï¿½ricos
             string cnpj = new string(value.Where(char.IsDigit).ToArray());
 
-            // CNPJ precisa ter 14 digitos e não ser uma sequência de números idênticos
+            // CNPJ precisa ter 14 digitos e nï¿½o ser uma sequï¿½ncia de nï¿½meros idï¿½nticos
             if (cnpj.Length != 14 || cnpj.All(c => c == cnpj[0]))
                 return false;
 
-            // Arrays de multiplicadores para os cálculos dos dígitos verificadores
+            // Arrays de multiplicadores para os cï¿½lculos dos dï¿½gitos verificadores
             int[] multiplicador1 = { 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
             int[] multiplicador2 = { 6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2 };
 
-            // Calcular o primeiro dígito verificador
+            // Calcular o primeiro dï¿½gito verificador
             int sum = 0;
             for (int i = 0; i < 12; i++)
                 sum += (cnpj[i] - '0') * multiplicador1[i];
 
             int firstDigit = (sum % 11) < 2 ? 0 : 11 - (sum % 11);
 
-            // Verificar o primeiro dígito
+            // Verificar o primeiro dï¿½gito
             if (firstDigit != (cnpj[12] - '0'))
                 return false;
 
-            // Calcular o segundo dígito verificador
+            // Calcular o segundo dï¿½gito verificador
             sum = 0;
             for (int i = 0; i < 13; i++)
                 sum += (cnpj[i] - '0') * multiplicador2[i];
 
             int secondDigit = (sum % 11) < 2 ? 0 : 11 - (sum % 11);
 
-            // Verificar o segundo dígito
+            // Verificar o segundo dï¿½gito
             return secondDigit == (cnpj[13] - '0');
         }
 
@@ -457,55 +434,127 @@ namespace Harmonika.Tools
     public static class UIHelper
     {
         /// <summary>
-        /// Creates a ColorBlock with colors proportional to the base color (normalColor).
+        /// Creates a ColorBlock maintaining Unity's default color proportions.
         /// </summary>
-        /// <param name="normalColor">Base color for the normal state.</param>
-        /// <returns>ColorBlock with the other colors adjusted proportionally.</returns>
-        public static ColorBlock CreateProportionalColorBlock(Color normalColor)
+        public static ColorBlock CreateProportionalColorBlock(Color baseColor)
         {
-            ColorBlock block = new ColorBlock();
-            block.normalColor = normalColor;
-            block.highlightedColor = MultiplyColor(normalColor, 0.88235f);
-            block.pressedColor = MultiplyColor(normalColor, 0.6980392f);
-            block.selectedColor = MultiplyColor(normalColor, 0.88235f);
-            block.disabledColor = MultiplyColor(normalColor, 0.5215687f);
-            block.colorMultiplier = 1f;
-            block.fadeDuration = 0.1f;
-            return block;
+            ColorBlock colorBlock = new ColorBlock
+            {
+                normalColor = baseColor,
+                highlightedColor = baseColor * 1.2f, // 20% brighter
+                pressedColor = baseColor * 0.8f,    // 20% darker
+                selectedColor = baseColor * 1.1f,   // 10% brighter
+                disabledColor = new Color(baseColor.r, baseColor.g, baseColor.b, 0.5f), // 50% opacity
+                colorMultiplier = 1f,
+                fadeDuration = 0.1f
+            };
+
+            return colorBlock;
         }
 
         /// <summary>
-        /// Multiplies the RGB channels of a color by a factor while keeping the alpha channel unchanged.
+        /// Converts basic HTML tags to TextMeshPro Rich Text format.
         /// </summary>
-        private static Color MultiplyColor(Color color, float factor)
+        public static string ConvertHtmlToTMPRichText(string htmlText)
         {
-            return new Color(color.r * factor, color.g * factor, color.b * factor, color.a);
+            if (string.IsNullOrEmpty(htmlText))
+                return string.Empty;
+
+            // Bold and Italic
+            htmlText = Regex.Replace(htmlText, @"<b>(.*?)<\/b>", "<b>$1</b>", RegexOptions.IgnoreCase);
+            htmlText = Regex.Replace(htmlText, @"<i>(.*?)<\/i>", "<i>$1</i>", RegexOptions.IgnoreCase);
+
+            // Colors (assuming hex or named colors)
+            htmlText = Regex.Replace(htmlText, @"<color=#([0-9A-Fa-f]{6,8})>(.*?)<\/color>", "<color=#$1>$2</color>", RegexOptions.IgnoreCase);
+            htmlText = Regex.Replace(htmlText, @"<color=([a-zA-Z]+)>(.*?)<\/color>", "<color=$1>$2</color>", RegexOptions.IgnoreCase);
+
+            // Size (converting px to TMP units)
+            htmlText = Regex.Replace(htmlText, @"<size=(\d+)>", match => $"<size={(int.Parse(match.Groups[1].Value) * 0.75f)}>");
+
+            // Remove unsupported tags (like <div>, <span>, etc.)
+            htmlText = Regex.Replace(htmlText, @"<\/?(div|span|p)>", "", RegexOptions.IgnoreCase);
+
+            return htmlText;
+        }
+    }
+
+    public static class SecureDataHandler
+    {
+        public static string Base64Encode(string plainText)
+        {
+            var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+            return Convert.ToBase64String(plainTextBytes);
         }
 
-        /// <summary>
-        /// Converts a basic HTML formatted string (with span, em, and strong tags) 
-        /// into TextMesh Pro compatible rich text.
-        /// </summary>
-        /// <param name="input">The HTML string to convert.</param>
-        /// <returns>A string formatted with TMP rich text tags.</returns>
-        public static string ConvertHtmlToTMPRichText(string input)
+        public static string EncryptBase64Data(string plainText, string password)
         {
-            if (string.IsNullOrEmpty(input))
-                return input;
+            byte[] salt = GenerateRandomSalt();
+            byte[] key = DeriveKeyFromPassword(password, salt);
 
-            // Convert <span style="color: #xxxxxx;"> tags to <color=#xxxxxx>
-            string output = Regex.Replace(input, @"<span\s+style\s*=\s*""color\s*:\s*(#[0-9A-Fa-f]{6});?""\s*>", "<color=$1>");
+            using (Aes aesAlg = Aes.Create())
+            {
+                aesAlg.Key = key;
+                aesAlg.GenerateIV();
 
-            // Replace closing </span> tags with </color>
-            output = Regex.Replace(output, @"</span>", "</color>");
+                using (MemoryStream ms = new MemoryStream())
+                {
+                    ms.Write(salt, 0, salt.Length);
+                    ms.Write(aesAlg.IV, 0, aesAlg.IV.Length);
 
-            // Replace <em> tags with <i> tags for italics
-            output = output.Replace("<em>", "<i>").Replace("</em>", "</i>");
+                    using (CryptoStream cs = new CryptoStream(ms, aesAlg.CreateEncryptor(), CryptoStreamMode.Write))
+                    using (StreamWriter sw = new StreamWriter(cs))
+                    {
+                        sw.Write(plainText);
+                    }
 
-            // Replace <strong> tags with <b> tags for bold
-            output = output.Replace("<strong>", "<b>").Replace("</strong>", "</b>");
+                    return Convert.ToBase64String(ms.ToArray());
+                }
+            }
+        }
 
-            return output;
+        public static string DecryptBase64Data(string encryptedData, string password)
+        {
+            byte[] encryptedBytes = Convert.FromBase64String(encryptedData);
+
+            using (MemoryStream ms = new MemoryStream(encryptedBytes))
+            {
+                byte[] salt = new byte[16];
+                byte[] iv = new byte[16];
+                ms.Read(salt, 0, salt.Length);
+                ms.Read(iv, 0, iv.Length);
+
+                byte[] key = DeriveKeyFromPassword(password, salt);
+
+                using (Aes aesAlg = Aes.Create())
+                {
+                    aesAlg.Key = key;
+                    aesAlg.IV = iv;
+
+                    using (CryptoStream cs = new CryptoStream(ms, aesAlg.CreateDecryptor(), CryptoStreamMode.Read))
+                    using (StreamReader sr = new StreamReader(cs))
+                    {
+                        return sr.ReadToEnd();
+                    }
+                }
+            }
+        }
+
+        private static byte[] GenerateRandomSalt()
+        {
+            byte[] salt = new byte[16];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(salt);
+            }
+            return salt;
+        }
+
+        private static byte[] DeriveKeyFromPassword(string password, byte[] salt)
+        {
+            using (var deriveBytes = new Rfc2898DeriveBytes(password, salt, 10000))
+            {
+                return deriveBytes.GetBytes(32);
+            }
         }
     }
 

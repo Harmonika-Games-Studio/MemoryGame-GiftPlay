@@ -103,6 +103,11 @@ public class AppBlocker : MonoBehaviour
         AssignButtons();
     }
 
+    private void Start()
+    {
+        StartCoroutine(ConnectAndLoad());
+    }
+
     private void AssignMenuManager()
     {
         if (TryGetComponent(out MenuManager menuManager))
